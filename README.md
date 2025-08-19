@@ -6,7 +6,6 @@ Welcome to the Python Projects Collection! This repository includes a variety of
 
 - [Projects](#projects)
 - [Getting Started](#getting-started)
-- [Usage](#usage)
 - [Contributing](#contributing)
 
 ## Projects
@@ -36,9 +35,6 @@ Clone the repository:
    git clone https://github.com/ejung2017/PythonProject.git
    cd PythonProject
 ```
-
-## Usage
-Make sure to modify any configurations or input files as necessary to suit your analysis needs.
 
 ## Contributing
 Contributions are welcome! If you have a project or improvement in mind, please follow these steps:
