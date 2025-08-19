@@ -14,7 +14,7 @@ Welcome to the Python Projects Collection! This repository includes a variety of
    - **Description**: This project analyzes the correlation between interest rates and the stock prices of Japanese regional banks based on recent economic data.
    - **Key Features**:
      - Data collection from financial news articles
-     - Visualization of trends over time
+     - Visualization of stock price over time
    - **Technologies Used**: Python, Pandas, NumPy, Matplotlib, Selenium
 
 2. **WWDC2025 Siri News Sentiment Analysis**
