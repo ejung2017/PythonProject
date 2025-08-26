@@ -16,14 +16,17 @@ Welcome to the Python Projects Collection! This repository includes a variety of
      - Data collection from financial news articles
      - Visualization of stock price over time
    - **Technologies Used**: Python, Pandas, NumPy, Matplotlib, Selenium
+   - **Findings**: Japan's interest rates and Japanese bank stock prices are positively correlated.
 
 2. **WWDC2025 Siri News Sentiment Analysis**
    - **Description**: This project scrape 100+ news articles on Siri during WWDC2025, revealing 65% negative sentiment about delayed AI features, contrasted with optimism for future capabilities and integration with Apple Intelligence
    - **Technologies Used**: Python, Pandas, SpaCy, Wordcloud, Selenium
+   - **Findings**: Strong sense of optimism about Siri's upcoming release in Spring 2026, particularly regarding its new AI-powered, personalized features. However, there were higher percentage of negative reactions (approximately 65%) due to the delays and Apple falling behind the AI competition in the tech industry. 
 
 3. **Amazon Product Crawling**
    - **Description**: Crawled two Amazon products' reviews to compare and identify the best purchase option (personal use)  
    - **Technologies Used**: Python, SpaCy, Wordcloud, Selenium
+   - **Findings**: Nicwell Water Dental Flosser is concluded to be the better option as COSLUS Water Pick has faced criticism regarding its design
 
 
 ## Getting Started
