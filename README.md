@@ -19,10 +19,17 @@ Welcome to the Python Projects Collection! This repository includes a variety of
 
 
 1. **Adyen Stock Price Forecasting with ARIMA**
-   - **Aim**: 
+   - **Objective**: Apply ARIMA time-series modeling to forecast stock prices, enabling accurate predictions of financial trends and performance metrics
+   - **Description**: This project can help financial firms by providing reliable stock price forecasts to guide trading strategies and risk management, potentially boosting decision-making accuracy in a dynamic market
+   - **Key Features**:
+     - ARIMA Time-Series Forecasting
+     - Data Visualization and Model Evaluation
+   - **Technologies Used**: Python, Scikit-learn, Seaborn, Statsmodels, Pandas, NumPy
+   - **Conclusion**: 
+  
 2. **Japanese Regional Bank Stocks Analysis (stock_analysis)**
-   - **Aim**: Finding the relationship between interest rates and bank stock prices
-   - **Description**:  This project analyzes the correlation between interest rates and the stock prices of Japanese regional banks using recent economic data.
+   - **Objective**: Identify the relationship between interest rates and bank stock prices
+   - **Description**: This project reveals a positive correlation between interest rates and bank stock prices, offering finance firms valuable data to refine investment strategies, enhance risk assessments, and optimize policy-driven trading decisions
    - **Key Features**:
      - Data collection from financial news articles
      - Visualization of stock price over time
@@ -32,17 +39,24 @@ Welcome to the Python Projects Collection! This repository includes a variety of
       - Analysis shows a 0.78 correlation between Japan’s interest rates and regional bank stock prices, with a 1% rate rise tied to a 2.3% stock increase over 12 months, influenced by market sentiment.
       - Visualizations reveal stock price growth during rising rates, with spikes during Bank of Japan announcements.
 
-4. **WWDC2025 Siri News Sentiment Analysis (siri_news)**
-   - **Aim**:  
-   - **Description**: This project scrapes over 100 news articles about Siri from WWDC2025 to analyze sentiment, revealing 65% negative sentiment due to delayed AI features, alongside optimism for future capabilities and integration with Apple Intelligence.
+3. **WWDC2025 Siri News Sentiment Analysis (siri_news)**
+   - **Objective**: Analyze sentiment to address real-time customer feedback and foster strategic decisions, especially in competitive tech markets
+   - **Description**: This project scraped over 100 news articles about Siri from WWDC2025 to understand public expectations and its potential business needs 
+   - **Key Features**:
+     - Sentiment Analysis of WWDC2025 News 
+     - Visualization of Sentiment Trends
    - **Technologies Used**: Python, Pandas, SpaCy, Wordcloud, Selenium
    - **Conclusion**: The sentiment analysis indicates a polarized reception of Siri’s updates at WWDC2025. Approximately 65% of the scraped articles expressed negative sentiment, primarily due to delays in AI feature rollouts, with frequent mentions of Apple lagging behind competitors like Google and OpenAI in the AI race. Common negative keywords included "delay," "disappointment," and "behind," as visualized in word clouds. Conversely, 35% of articles expressed optimism about Siri’s Spring 2026 release, highlighting anticipated AI-powered features such as personalized user interactions and seamless integration with Apple Intelligence. The analysis identified key positive themes, including "proactive assistance" and "context-aware responses," with a sentiment score of +0.45 for optimistic articles compared to -0.62 for negative ones (based on SpaCy’s sentiment model). The findings suggest a mixed public perception, with excitement tempered by frustration over timelines.
    - **Findings**:
       - Sentiment analysis of WWDC2025 Siri updates shows 65% negative sentiment (-0.62) due to AI delays, vs. 35% positive (+0.45) for Spring 2026 features like "proactive assistance."
       - Word clouds reflect mixed perception, with frustration over timelines balanced by excitement for AI-powered interactions.
 
-6. **Amazon Product Crawling (amazon_review_crawling)**
-   - **Description**: This project crawls reviews of two Amazon products (Nicwell Water Dental Flosser and COSLUS Water Pick) to compare them and determine the best purchase option for personal use.
+4. **Amazon Product Crawling (amazon_review_crawling)**
+   - **Objective**: Compare the sentiment of two products' user reviews to identify key insights
+   - **Description**: This project examined web data to identify product strengths and weaknesses, assisting the customer in making well-informed purchasing decision
+   - **Key Features**:
+     - Automated Amazon Review Scraping 
+     - Sentiment Analysis of Customer Reviews
    - **Technologies Used**: Python, SpaCy, Wordcloud, Selenium
    - **Conclusion**: The analysis of customer reviews concludes that the Nicwell Water Dental Flosser is the better purchase option compared to the COSLUS Water Pick. For the Nicwell flosser, 78% of reviews were positive, with frequent praise for its "ease of use," "durability," and "effective cleaning" (average sentiment score of +0.72). Word clouds highlighted terms like "reliable," "compact," and "value." In contrast, the COSLUS Water Pick had only 52% positive reviews, with 48% of reviews citing issues such as "poor design," "leaking," and "short battery life" (average sentiment score of -0.38). Common complaints included difficulties with the water tank design and inconsistent pressure settings. The comparison suggests that the Nicwell flosser offers superior performance and user satisfaction for personal use.
    - **Findings**:
