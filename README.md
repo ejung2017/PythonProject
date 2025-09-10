@@ -2,13 +2,13 @@
 
 Welcome to the Python Projects Collection! This repository highlights my diverse Python projects, driven by my enthusiasm for Machine Learning, Natural Language Processing (NLP), and data insights, spanning data analysis, predictive modeling, web scraping, ARIMA forecasting, SQL, and data visualization. My aim is to expand my expertise across Artificial Intelligence (AI) and Machine Learning (ML) domains, while tackling diverse real-world challenges and delivering practical solutions across various industries 🚀
 
-## Table of Contents
+## 📋 Table of Contents
 
 - [Projects](#projects)
 - [Getting Started](#getting-started)
 - [Contributing](#contributing)
 
-## Projects
+## 📌 Projects
 
 | Project             | Skills            | Description              |
 |---------------------|-------------------|--------------------------|
@@ -64,7 +64,7 @@ Welcome to the Python Projects Collection! This repository highlights my diverse
       - Word clouds show Nicwell’s "reliable" and "compact" appeal, while COSLUS struggles with "leaking" and "short battery life," favoring Nicwell for user satisfaction.
 
 
-## Getting Started
+## 🖇️ Getting Started
 
 To get started with any of the projects in this repository, follow these steps:
 
@@ -79,7 +79,7 @@ Clone the repository:
    cd PythonProject
 ```
 
-## Contributing
+## 🤝 Contributing
 Contributions are welcome! If you have a project or improvement in mind, please follow these steps:
 
 1. Fork the repository.
