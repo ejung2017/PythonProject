@@ -12,34 +12,13 @@ Welcome to the Python Projects Collection! This repository highlights my diverse
 
 | Project             | Skills            | Description              |
 |---------------------|-------------------|--------------------------|
+| Sentiment Analysis  | Python, NLP, SpaCy, Web Scraping | Analyzes market response   |
 | ARIMA Time-Series Analysis      | Python, Scikit-learn, Seaborn, Statsmodels      | Forecasts stock prices   |
 | Stock Analysis      | Python, Matplotlib, Pandas, Numpy       | Analyzes market trends   |
-| Sentiment Analysis  | Python, NLP, SpaCy, Web Scraping | Analyzes market response   |
-| Product Analysis    | Python, Selenium, SpaCy, WordCloud | Analyzes e-commerce customer feedback   |
+| Product Review Analysis    | Python, Selenium, SpaCy, WordCloud | Analyzes e-commerce customer feedback   |
 
 
-1. **Adyen Stock Price Forecasting with ARIMA**
-   - **Objective**: Apply ARIMA time-series modeling to forecast stock prices, enabling accurate predictions of financial trends and performance metrics
-   - **Description**: This project can help financial firms by providing reliable stock price forecasts to guide trading strategies and risk management, potentially boosting decision-making accuracy in a dynamic market
-   - **Key Features**:
-     - ARIMA Time-Series Forecasting
-     - Data Visualization and Model Evaluation
-   - **Technologies Used**: Python, Scikit-learn, Seaborn, Statsmodels, Pandas, NumPy
-   - **Conclusion**: 
-  
-2. **Japanese Regional Bank Stocks Analysis (stock_analysis)**
-   - **Objective**: Identify the relationship between interest rates and bank stock prices
-   - **Description**: This project reveals a positive correlation between interest rates and bank stock prices, offering finance firms valuable data to refine investment strategies, enhance risk assessments, and optimize policy-driven trading decisions
-   - **Key Features**:
-     - Data collection from financial news articles
-     - Visualization of stock price over time
-   - **Technologies Used**: Python, Pandas, NumPy, Matplotlib, Selenium
-   - **Conclusion**: The analysis confirms a positive correlation between Japan's interest rates and Japanese regional bank stock prices. Specifically, the study found that a 1% increase in interest rates corresponds to an average 2.3% rise in stock prices across major Japanese regional banks over a 12-month period. Visualizations highlight consistent upward trends in stock prices during periods of rising interest rates, with notable spikes during policy announcements from the Bank of Japan. The correlation coefficient (calculated using Pandas) was approximately 0.78, indicating a strong positive relationship. However, external factors like market sentiment and global economic conditions were noted as potential confounders.
-   - **Findings**:
-      - Analysis shows a 0.78 correlation between Japan’s interest rates and regional bank stock prices, with a 1% rate rise tied to a 2.3% stock increase over 12 months, influenced by market sentiment.
-      - Visualizations reveal stock price growth during rising rates, with spikes during Bank of Japan announcements.
-
-3. **WWDC2025 Siri News Sentiment Analysis (siri_news)**
+1. **WWDC2025 Siri News Sentiment Analysis (siri_news)**
    - **Objective**: Analyze sentiment to address real-time customer feedback and foster strategic decisions, especially in competitive tech markets
    - **Description**: This project scraped over 100 news articles about Siri from WWDC2025 to understand public expectations and its potential business needs 
    - **Key Features**:
@@ -50,6 +29,27 @@ Welcome to the Python Projects Collection! This repository highlights my diverse
    - **Findings**:
       - Sentiment analysis of WWDC2025 Siri updates shows 65% negative sentiment (-0.62) due to AI delays, vs. 35% positive (+0.45) for Spring 2026 features like "proactive assistance."
       - Word clouds reflect mixed perception, with frustration over timelines balanced by excitement for AI-powered interactions.
+
+2. **Adyen Stock Price Forecasting with ARIMA**
+   - **Objective**: Apply ARIMA time-series modeling to forecast stock prices, enabling accurate predictions of financial trends and performance metrics
+   - **Description**: This project can help financial firms by providing reliable stock price forecasts to guide trading strategies and risk management, potentially boosting decision-making accuracy in a dynamic market
+   - **Key Features**:
+     - ARIMA Time-Series Forecasting
+     - Data Visualization and Model Evaluation
+   - **Technologies Used**: Python, Scikit-learn, Seaborn, Statsmodels, Pandas, NumPy
+   - **Conclusion**: 
+  
+3. **Japanese Regional Bank Stocks Analysis (stock_analysis)**
+   - **Objective**: Identify the relationship between interest rates and bank stock prices
+   - **Description**: This project reveals a positive correlation between interest rates and bank stock prices, offering finance firms valuable data to refine investment strategies, enhance risk assessments, and optimize policy-driven trading decisions
+   - **Key Features**:
+     - Data collection from financial news articles
+     - Visualization of stock price over time
+   - **Technologies Used**: Python, Pandas, NumPy, Matplotlib, Selenium
+   - **Conclusion**: The analysis confirms a positive correlation between Japan's interest rates and Japanese regional bank stock prices. Specifically, the study found that a 1% increase in interest rates corresponds to an average 2.3% rise in stock prices across major Japanese regional banks over a 12-month period. Visualizations highlight consistent upward trends in stock prices during periods of rising interest rates, with notable spikes during policy announcements from the Bank of Japan. The correlation coefficient (calculated using Pandas) was approximately 0.78, indicating a strong positive relationship. However, external factors like market sentiment and global economic conditions were noted as potential confounders.
+   - **Findings**:
+      - Analysis shows a 0.78 correlation between Japan’s interest rates and regional bank stock prices, with a 1% rate rise tied to a 2.3% stock increase over 12 months, influenced by market sentiment.
+      - Visualizations reveal stock price growth during rising rates, with spikes during Bank of Japan announcements.
 
 4. **Amazon Product Crawling (amazon_review_crawling)**
    - **Objective**: Compare the sentiment of two products' user reviews to identify key insights
