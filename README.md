@@ -37,7 +37,10 @@ Welcome to the Python Projects Collection! This repository highlights my diverse
      - ARIMA Time-Series Forecasting
      - Data Visualization and Model Evaluation
    - **Technologies Used**: Python, Scikit-learn, Seaborn, Statsmodels, Pandas, NumPy
-   - **Conclusion**: 
+   - **Conclusion**: This project implements an ARIMA (AutoRegressive Integrated Moving Average) predictive modeling approach to forecast stock prices for Adyen, a unified commerce payment processing company. The ARIMA model parameters (p, d, q) are determined using ACF/PACF plots and auto-ARIMA fitting, followed by model training on the time series. Forecasting is performed for a specified future period, with visualizations of actual vs. predicted values and residual analysis. Evaluation metrics such as RMSE and MAE indicate reasonable predictive accuracy, demonstrating ARIMA's effectiveness for short-term financial forecasting while highlighting limitations in capturing non-linear market dynamics.
+   - **Findings**:
+      - XGBoost demonstrated superior performance over ARIMA in forecasting Adyen's stock prices, achieving significantly lower evaluation metrics with an MAE of 11.84 and RMSE of 22.58 compared to ARIMA's MAE of 93.59 and RMSE of 103.05.
+      - Visual comparisons of actual versus predicted values highlighted XGBoost's better ability to capture trends in the test data, while ARIMA showed limitations in handling the financial time series' complexities
   
 3. **Japanese Regional Bank Stocks Analysis (stock_analysis)**
    - **Objective**: Identify the relationship between interest rates and bank stock prices
