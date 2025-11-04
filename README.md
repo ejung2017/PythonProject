@@ -1,95 +1,61 @@
 # <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/python/python-original.svg" alt="python" width="40" height="40"/> PythonProject Collection
 
-Welcome to the Python Projects Collection! This repository highlights my diverse Python projects, driven by my enthusiasm for Machine Learning, Natural Language Processing (NLP), and data insights, spanning data analysis, predictive modeling, web scraping, ARIMA forecasting, SQL, and data visualization. My aim is to expand my expertise across Artificial Intelligence (AI) and Machine Learning (ML) domains, while tackling diverse real-world challenges and delivering practical solutions across various industries 🚀
+Welcome to my Python Projects Collection! This repository highlights my diverse projects, driven by my enthusiasm for Machine Learning, Natural Language Processing (NLP), and data insights, spanning data analysis, predictive modeling, web scraping, ARIMA forecasting, SQL, data visualization, and many more! 
 
-## 📋 Table of Contents
-
-- [Projects](#projects)
-- [Getting Started](#getting-started)
-- [Contributing](#contributing)
+My aim is to expand my expertise across Artificial Intelligence (AI) and Machine Learning (ML) domains, while tackling diverse real-world challenges and delivering practical solutions across various industries 🚀
 
 ## 📌 Projects
 
-| Project             | Skills            | Description              |
-|---------------------|-------------------|--------------------------|
-| Sentiment Analysis  | Python, NLP, SpaCy, Web Scraping | Analyzes market response   |
-| ARIMA Time-Series Analysis      | Python, Scikit-learn, Seaborn, Statsmodels      | Forecasts stock prices   |
-| Stock Analysis      | Python, Matplotlib, Pandas, Numpy       | Analyzes market trends   |
-| Product Review Analysis    | Python, Selenium, SpaCy, WordCloud | Analyzes e-commerce customer feedback   |
+| Project                         | Skills                                          | Description                             |
+|---------------------------------|-------------------------------------------------|-----------------------------------------|
+| Sentiment Analysis              | Python, NLP, SpaCy, Web Scraping                | Analyzes market response                |
+| ARIMA Time-Series Analysis      | Python, Scikit-learn, Seaborn, Statsmodels      | Forecasts stock prices                  |
+| Stock Analysis                  | Python, Matplotlib, Pandas, Numpy               | Analyzes market trends                  |
+| Product Review Analysis         | Python, Selenium, SpaCy, WordCloud              | Analyzes e-commerce customer feedback   |
 
 
-1. **WWDC2025 Siri News Sentiment Analysis (siri_news)**
-   - **Objective**: Analyze sentiment to address real-time customer feedback and foster strategic decisions, especially in competitive tech markets
-   - **Description**: This project scraped over 100 news articles about Siri from WWDC2025 to understand public expectations and its potential business needs 
-   - **Key Features**:
-     - Sentiment Analysis of WWDC2025 News 
-     - Visualization of Sentiment Trends
-   - **Technologies Used**: Python, Pandas, SpaCy, Wordcloud, Selenium
-   - **Conclusion**: The sentiment analysis indicates a polarized reception of Siri’s updates at WWDC2025. Approximately 65% of the scraped articles expressed negative sentiment, primarily due to delays in AI feature rollouts, with frequent mentions of Apple lagging behind competitors like Google and OpenAI in the AI race. Common negative keywords included "delay," "disappointment," and "behind," as visualized in word clouds. Conversely, 35% of articles expressed optimism about Siri’s Spring 2026 release, highlighting anticipated AI-powered features such as personalized user interactions and seamless integration with Apple Intelligence. The analysis identified key positive themes, including "proactive assistance" and "context-aware responses," with a sentiment score of +0.45 for optimistic articles compared to -0.62 for negative ones (based on SpaCy’s sentiment model). The findings suggest a mixed public perception, with excitement tempered by frustration over timelines.
-   - **Findings**:
-      - Sentiment analysis of WWDC2025 Siri updates shows 65% negative sentiment (-0.62) due to AI delays, vs. 35% positive (+0.45) for Spring 2026 features like "proactive assistance."
-      - Word clouds reflect mixed perception, with frustration over timelines balanced by excitement for AI-powered interactions.
+## 🤖 [WWDC2025 Siri News Sentiment Analysis](https://github.com/ejung2017/PythonProject/tree/main/siri_news)
 
-2. **Adyen Stock Price Forecasting with ARIMA**
-   - **Objective**: Apply ARIMA time-series modeling to forecast stock prices, enabling accurate predictions of financial trends and performance metrics
-   - **Description**: This project can help financial firms by providing reliable stock price forecasts to guide trading strategies and risk management, potentially boosting decision-making accuracy in a dynamic market
-   - **Key Features**:
-     - ARIMA Time-Series Forecasting
-     - Data Visualization and Model Evaluation
-   - **Technologies Used**: Python, Scikit-learn, Seaborn, Statsmodels, Pandas, NumPy
-   - **Conclusion**: This project implements an ARIMA (AutoRegressive Integrated Moving Average) predictive modeling approach to forecast stock prices for Adyen, a unified commerce payment processing company. The ARIMA model parameters (p, d, q) are determined using ACF/PACF plots and auto-ARIMA fitting, followed by model training on the time series. Forecasting is performed for a specified future period, with visualizations of actual vs. predicted values and residual analysis. Evaluation metrics such as RMSE and MAE indicate reasonable predictive accuracy, demonstrating ARIMA's effectiveness for short-term financial forecasting while highlighting limitations in capturing non-linear market dynamics.
-   - **Findings**:
-      - XGBoost demonstrated superior performance over ARIMA in forecasting Adyen's stock prices, achieving significantly lower evaluation metrics with an MAE of 11.84 and RMSE of 22.58 compared to ARIMA's MAE of 93.59 and RMSE of 103.05.
-      - Visual comparisons of actual versus predicted values highlighted XGBoost's better ability to capture trends in the test data, while ARIMA showed limitations in handling the financial time series' complexities
-  
-3. **Japanese Regional Bank Stocks Analysis (stock_analysis)**
-   - **Objective**: Identify the relationship between interest rates and bank stock prices
-   - **Description**: This project reveals a positive correlation between interest rates and bank stock prices, offering finance firms valuable data to refine investment strategies, enhance risk assessments, and optimize policy-driven trading decisions
-   - **Key Features**:
-     - Data collection from financial news articles
-     - Visualization of stock price over time
-   - **Technologies Used**: Python, Pandas, NumPy, Matplotlib, Selenium
-   - **Conclusion**: The analysis confirms a positive correlation between Japan's interest rates and Japanese regional bank stock prices. Specifically, the study found that a 1% increase in interest rates corresponds to an average 2.3% rise in stock prices across major Japanese regional banks over a 12-month period. Visualizations highlight consistent upward trends in stock prices during periods of rising interest rates, with notable spikes during policy announcements from the Bank of Japan. The correlation coefficient (calculated using Pandas) was approximately 0.78, indicating a strong positive relationship. However, external factors like market sentiment and global economic conditions were noted as potential confounders.
-   - **Findings**:
-      - Analysis shows a 0.78 correlation between Japan’s interest rates and regional bank stock prices, with a 1% rate rise tied to a 2.3% stock increase over 12 months, influenced by market sentiment.
-      - Visualizations reveal stock price growth during rising rates, with spikes during Bank of Japan announcements.
+This project analyzes sentiment to address real-time customer feedback and foster strategic decisions, especially in competitive tech markets. Based on 98 news articles scraped about Apple Intelligence Siri during WWDC2025, I tried to understand public expectations and its potential business needs. 
 
-4. **Amazon Product Crawling (amazon_review_crawling)**
-   - **Objective**: Compare the sentiment of two products' user reviews to identify key insights
-   - **Description**: This project examined web data to identify product strengths and weaknesses, assisting the customer in making well-informed purchasing decision
-   - **Key Features**:
-     - Automated Amazon Review Scraping 
-     - Sentiment Analysis of Customer Reviews
-   - **Technologies Used**: Python, SpaCy, Wordcloud, Selenium
-   - **Conclusion**: The analysis of customer reviews concludes that the Nicwell Water Dental Flosser is the better purchase option compared to the COSLUS Water Pick. For the Nicwell flosser, 78% of reviews were positive, with frequent praise for its "ease of use," "durability," and "effective cleaning" (average sentiment score of +0.72). Word clouds highlighted terms like "reliable," "compact," and "value." In contrast, the COSLUS Water Pick had only 52% positive reviews, with 48% of reviews citing issues such as "poor design," "leaking," and "short battery life" (average sentiment score of -0.38). Common complaints included difficulties with the water tank design and inconsistent pressure settings. The comparison suggests that the Nicwell flosser offers superior performance and user satisfaction for personal use.
-   - **Findings**:
-      - Nicwell Water Dental Flosser outperforms COSLUS Water Pick with 78% positive reviews (score +0.72) for "ease of use" and "durability," vs. 52% for COSLUS (score -0.38) due to "poor design" issues.
-      - Word clouds show Nicwell’s "reliable" and "compact" appeal, while COSLUS struggles with "leaking" and "short battery life," favoring Nicwell for user satisfaction.
+**Key Findings**:
+  - 35% showing optimism towards personalization and integration of AI-powered features.
+  - 65% showing disappointment due to constant delays and incapabilities to match the users' expectations
+  - Word Cloud with filtered keywords 
+ <img width="790" height="427" alt="Unknown" src="https://github.com/user-attachments/assets/21ae5ffa-1d4e-401b-b7dc-d1388ab08c96" />
 
 
-## 🖇️ Getting Started
+## 📊 [Stock Price Forecast with ARIMA](https://github.com/ejung2017/PythonProject/tree/main/arima_predictive_modeling)
 
-To get started with any of the projects in this repository, follow these steps:
+This project applies ARIMA (AutoRegressive Integrated Moving Average) time-series modeling to forecast stock prices, enabling accurate predictions of financial trends and performance metrics. The user can input a listed stock ticker to get a solid analysis on the stock price trend and advice on the future return. 
 
-Pre-requisites: 
-- Python 3.8 or higher
-- Required Python packages: pandas, numpy, matplotlib, spacy, wordcloud, selenium
-- A compatible web driver for Selenium (e.g., ChromeDriver)
+*Streamlit URL*: 
 
-Clone the repository:
-```
-   git clone https://github.com/ejung2017/PythonProject.git
-   cd PythonProject
-```
+**Key Findings**:
+- Interactive web app where the user ...
+- Machine Learning model accuracy of ##% to predict the next day stock price trend
 
-## 🤝 Contributing
-Contributions are welcome! If you have a project or improvement in mind, please follow these steps:
+🚧 Screenshot of Streamlit here
 
-1. Fork the repository.
-2. Create a new branch (```git checkout -b feature-branch```).
-3. Make your changes and commit them (```git commit -m 'Add new feature'```).
-4. Push to the branch (```git push origin feature-branch```).
-5. Create a pull request.
+## 🏦 [Japanese Regional Bank Stocks Analysis](https://github.com/ejung2017/PythonProject/tree/main/stock_analysis)
+
+This project aims to investigate the relationship between interest rates and regional bank stock prices. Generally, interest rates and stock prices have an inverse relationship, but the impact on banking can be different as banks may benefit from wider profit margins in a rising rate environment. 
+
+**Key Findings**:
+- Correlation Coefficient: 0.78
+- Positive correlation between Japan's interest rates and Japanese regional bank stock prices
+- 1% interest rate rise tied to a 2.3% stock price increase over 12 months, influenced by market sentiment
+
+## 🛍️ [Amazon Product Crawling](https://github.com/ejung2017/PythonProject/tree/main/amazon_review_crawling)
+
+This project compares two products based on the customer reviews and comes up with the most ideal suggestion for a customer (myself). 
+
+**Key Findings**:
+- Product A (Nicwell) is more suitable with 78% positive reviews
+- Product B (COSLUS) had 52% positive reviews
+- Product A had better reviews regarding durability, design, and convenience.
 
 
-Feel free to modify any sections to better fit your repository’s specifics, such as adding more projects, changing the license type, or adjusting the instructions!
+| Product A               |  Product B              |
+|-------------------------|-------------------------|
+|<img width="425" alt="Unknown-2" src="https://github.com/user-attachments/assets/d3355e37-045d-4c18-b111-291303c518cd" /> | <img width="425" alt="Unknown-3" src="https://github.com/user-attachments/assets/2251d892-2a8c-45ad-9546-c2ac1d1ae9ab" /> |
