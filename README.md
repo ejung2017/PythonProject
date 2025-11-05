@@ -31,11 +31,11 @@ This project applies ARIMA (AutoRegressive Integrated Moving Average) time-serie
 
 *Streamlit URL*: 
 
-**Key Findings**:
-- Interactive web app where the user ...
-- Machine Learning model accuracy of ##% to predict the next day stock price trend
+**Key Deliverables**:
+- Interactive web app where the user inputs the ticker and the date range for stock analysis
+- ARIMA Time Series Analysis including SMA20, EMA60, RSI, MACD, and Bollinger Bands
 
-🚧 Screenshot of Streamlit here
+https://github.com/user-attachments/assets/ac3ae2c0-d108-4c4f-92f9-1e65f3eb1d1b
 
 ## 🏦 [Japanese Regional Bank Stocks Analysis](https://github.com/ejung2017/PythonProject/tree/main/stock_analysis)
 
