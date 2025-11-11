@@ -29,7 +29,7 @@ This project analyzes sentiment to address real-time customer feedback and foste
 
 This project applies ARIMA (AutoRegressive Integrated Moving Average) time-series modeling to forecast stock prices, enabling accurate predictions of financial trends and performance metrics. The user can input a listed stock ticker to get a solid analysis on the stock price trend and advice on the future return. 
 
-*Streamlit URL*: 
+*Streamlit URL*: https://stockanalysis-ej.streamlit.app
 
 **Key Deliverables**:
 - Interactive web app where the user inputs the ticker and the date range for stock analysis
