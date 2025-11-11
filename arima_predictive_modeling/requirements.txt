@@ -4,4 +4,3 @@ pandas==2.2.3
 numpy==1.26.4
 matplotlib==3.9.2
 TA-Lib==0.6.8
-seaborn==0.13.2
