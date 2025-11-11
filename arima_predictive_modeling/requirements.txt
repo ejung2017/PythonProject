@@ -5,3 +5,4 @@ numpy==1.26.4
 matplotlib==3.9.2
 TA-Lib==0.6.8
 pmdarima==2.0.4
+statsmodels==0.14.2
