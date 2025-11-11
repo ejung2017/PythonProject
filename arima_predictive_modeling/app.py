@@ -5,6 +5,10 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import talib
+from statsmodels.tsa.arima.model import ARIMA
+import pmdarima as pm
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+
 # import seaborn as sns
 # from sklearn.model_selection import train_test_split
 # from sklearn.metrics import accuracy_score, classification_report
@@ -17,7 +21,7 @@ import talib
 # from sklearn.preprocessing import StandardScaler
 
 st.set_page_config(
-    page_title="📊 Stock Analysis App",
+    page_title="📊 ARIMA Time Series Stock Analysis App",
     page_icon="📈",
     layout="centered",
     initial_sidebar_state="expanded",
@@ -34,6 +38,7 @@ ticker = st.sidebar.text_input("Ticker (e.g. AAPL):", value="")
 START_default = pd.to_datetime("2024-01-01").date()
 START = st.sidebar.date_input("Start date", value=START_default)
 END = st.sidebar.date_input("End date", value=date.today())
+pred_days = st.sidebar.radio("Stock price prediction after how many days?", ["1 Day", "15 Days", "1 Month"])
 load_btn = st.sidebar.button("Load data")
 
 
@@ -220,3 +225,56 @@ if load_btn:
     ax_cross.set_ylabel("Equity Curve")
     fig_cross.tight_layout()
     st.pyplot(fig_cross)
+
+    # ARIMA Forecast
+    st.subheader(f"ARIMA Forecast of {ticker} after {pred_days}")
+    series = data['Close']
+    
+    model = pm.auto_arima(
+        series,  # Your time series data
+        start_p=1, max_p=5,  # Range for p (autoregressive order)
+        start_q=1, max_q=5,  # Range for q (moving average order)
+        d=None, max_d=2,  # Order of differencing (auto-determined if None)
+        seasonal=False,  # Set to True for SARIMA, then define P, D, Q, m
+        information_criterion='aic',  # Criterion for model selection
+        trace=True,  # Print model fitting progress
+        error_action='ignore',  # Ignore errors during model fitting
+        suppress_warnings=True,  # Suppress warnings
+        stepwise=True,  # Use stepwise search for efficiency
+        n_jobs=-1  # Use all available cores for parallel processing
+    )
+
+    best_p, best_d, best_q = model.order
+    st.write(f"Best (p, d, q) orders: {best_p, best_d, best_q}")
+
+    # ARIMA (p=1, d=1, q=1)
+    model = ARIMA(series, order=(best_p, best_d, best_q))
+    model_fit = model.fit()
+
+    # Forecast
+    if pred_days == "1 Day": 
+        forecast = model_fit.forecast(steps=1)
+    elif pred_days == "15 Days": 
+        forecast = model_fit.forecast(steps=15)
+    else: 
+        forecast = model_fit.forecast(steps=30)
+    st.write(f"The stock price after {pred_days} is forecasted to be ${forecast.iloc[0]:.2f}")
+
+    # # Calculate MAE
+    # mae = mean_absolute_error(series, forecast)
+    # st.write(f"Mean Absolute Error (MAE): {mae:.3f}")
+
+    # # Calculate MSE
+    # mse = mean_squared_error(series, forecast)
+    # st.write(f"Mean Squared Error (MSE): {mse:.3f}")
+
+    # # Calculate RMSE
+    # rmse = np.sqrt(mse)
+    # st.write(f"Root Mean Squared Error (RMSE): {rmse:.3f}")
+
+    # # Calculate MAPE (handling potential division by zero for actual_values == 0)
+    # def calculate_mape(y_true, y_pred):
+    #     return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+
+    # mape = calculate_mape(series, forecast)
+    # st.write(f"Mean Absolute Percentage Error (MAPE): {mape:.3f}%")
