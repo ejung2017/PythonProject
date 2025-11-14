@@ -1,7 +1,7 @@
 streamlit==1.51.0
 yfinance==0.2.66
 pandas==2.2.3
-numpy>=2.1.0,<3.0  # Has 3.13 wheel → installs fast
+numpy==1.26.4
 matplotlib==3.9.2
 TA-Lib==0.6.8
 statsmodels==0.14.2
