@@ -8,6 +8,8 @@ import talib
 from statsmodels.tsa.arima.model import ARIMA
 import pmdarima as pm
 from sklearn.metrics import mean_absolute_error, mean_squared_error
+from io import StringIO  
+from typing import Optional, Tuple
 
 # import seaborn as sns
 # from sklearn.model_selection import train_test_split
@@ -31,6 +33,225 @@ github_url = "https://github.com/ejung2017/PythonProject/tree/main"
 
 st.title("📊 Stock Analysis App")
 st.write("Enter a ticker in the sidebar and click Load data and ARIMA Time Series Analysis. \n\nFor more information, please visit [link](%s)." % github_url)
+
+# Step 1: Fetch S&P 500 ticker list from Wikipedia (reliable source)
+def get_sp500_tickers() -> list[str]:
+    hardcoded = [
+        'A', 'AAL', 'AAPL', 'ABBV', 'ABNB', 'ABT', 'ACGL', 'ACN', 'ADBE', 'ADI', 'ADM', 'ADP', 'ADSK', 'AEE', 'AEP', 'AES', 'AFL',
+        'AIG', 'AIZ', 'AJG', 'AKAM', 'ALB', 'ALGN', 'ALL', 'ALLE', 'AMAT', 'AMCR', 'AMD', 'AME', 'AMGN', 'AMP', 'AMT', 'AMZN', 'ANET',
+        'AON', 'AOS', 'APA', 'APD', 'APH', 'APTV', 'ARE', 'ATO', 'AVB', 'AVGO', 'AWK', 'AXON', 'AXP', 'AZO', 'BA', 'BAC',
+        'BAX', 'BBWI', 'BBY', 'BDX', 'BEN', 'BF-B', 'BG', 'BIIB', 'BIO', 'BK', 'BKNG', 'BKR', 'BLK', 'BLDR', 'BMY', 'BR', 'BRK-B',
+        'BRO', 'BSX', 'BWA', 'BX', 'BXP', 'C', 'CAG', 'CAH', 'CARR', 'CAT', 'CB', 'CBOE', 'CBRE', 'CCI', 'CCL', 'CDNS', 'CDW', 'CE',
+        'CEG', 'CF', 'CFG', 'CHD', 'CHRW', 'CHTR', 'CI', 'CINF', 'CL', 'CLX', 'CMA', 'CMCSA', 'CME', 'CMG', 'CMI', 'CMS', 'CNC', 'CNP',
+        'COF', 'COO', 'COP', 'COR', 'COST', 'CPAY', 'CPB', 'CPRT', 'CPT', 'CRL', 'CRM', 'CSCO', 'CSGP', 'CSX', 'CTAS', 'CTLT', 'CTRA',
+        'CTSH', 'CVS', 'CVX', 'CZR', 'D', 'DAL', 'DAY', 'DE', 'DECK', 'DFS', 'DG', 'DGX', 'DHI', 'DHR', 'DIS', 'DLR', 'DLTR', 'DOC',
+        'DOV', 'DPZ', 'DRI', 'DTE', 'DUK', 'DVA', 'DVN', 'DXCM', 'EA', 'EBAY', 'ECL', 'ED', 'EFX', 'EG', 'EIX', 'EL', 'ELV', 'EMR',
+        'ENPH', 'EOG', 'EPAM', 'EQIX', 'EQR', 'EQT', 'ES', 'ESS', 'ETN', 'ETR', 'ETSY', 'EVRG', 'EW', 'EXC', 'EXPD', 'EXPE', 'EXR',
+        'F', 'FANG', 'FAST', 'FDS', 'FDX', 'FE', 'FFIV', 'FI', 'FICO', 'FICO', 'FIS', 'FITB', 'FOX', 'FOXA', 'FRT', 'FSLR', 'FTNT', 'FTV',
+        'GD', 'GE', 'GEHC', 'GEN', 'GEV', 'GILD', 'GIS', 'GL', 'GLW', 'GM', 'GNRC', 'GOOG', 'GOOGL', 'GPC', 'GPN', 'GRMN', 'GS',
+        'GWW', 'HAL', 'HAS', 'HBAN', 'HCA', 'HD', 'HIG', 'HII', 'HLT', 'HOLX', 'HON', 'HPE', 'HPQ', 'HRL', 'HSIC', 'HST',
+        'HSY', 'HUBB', 'HUM', 'HWM', 'IBM', 'ICE', 'IDXX', 'IEX', 'ILMN', 'INCY', 'INTC', 'INTU', 'INVH', 'IP', 'IPG', 'IQV', 'IR',
+        'IRM', 'ISRG', 'IT', 'ITW', 'IVZ', 'J', 'JBHT', 'JBL', 'JCI', 'JKHY', 'JNJ', 'JNPR', 'JPM', 'K', 'KDP', 'KEY', 'KEYS', 'KHC',
+        'KIM', 'KLAC', 'KMB', 'KMI', 'KMX', 'KO', 'KR', 'KVUE', 'L', 'LDOS', 'LEN', 'LH', 'LHX', 'LKQ', 'LLY', 'LMT', 'LNT', 'LOW',
+        'LRCX', 'LULU', 'LUV', 'LVS', 'LW', 'LYV', 'MA', 'MAA', 'MAR', 'MAS', 'MCD', 'MCHP', 'MCK', 'MCO', 'MDLZ', 'MDT', 'MET',
+        'META', 'MGM', 'MHK', 'MKC', 'MKTX', 'MMC', 'MMM', 'MNST', 'MO', 'MOH', 'MOS', 'MPC', 'MPWR', 'MRK', 'MRNA', 'MRO', 'MS',
+        'MSCI', 'MSFT', 'MSI', 'MTB', 'MTCH', 'MTD', 'MU', 'NCLH', 'NDAQ', 'NDSN', 'NEE', 'NEM', 'NFLX', 'NI', 'NKE', 'NOC', 'NOW',
+        'NRG', 'NSC', 'NTAP', 'NTRS', 'NVDA', 'NVR', 'NWS', 'NWSA', 'NXPI', 'O', 'ODFL', 'OKE', 'OMC', 'ON', 'ORCL', 'ORLY', 'OTIS',
+        'OXY', 'PANW', 'PAYC', 'PAYX', 'PCAR', 'PCG', 'PEG', 'PEP', 'PFE', 'PFG', 'PG', 'PGR', 'PH', 'PHM', 'PKG', 'PLD',
+        'PM', 'PNC', 'PNR', 'PNW', 'PODD', 'POOL', 'PPL', 'PRU', 'PSA', 'PSX', 'PTC', 'PWR', 'PYPL', 'QCOM', 'QRVO', 'RCL', 'REG',
+        'REGN', 'RF', 'RHI', 'RJF', 'RL', 'RMD', 'ROK', 'ROL', 'ROP', 'ROST', 'RSG', 'RTX', 'RVTY', 'SBAC', 'SBUX', 'SCHW', 'SEE',
+        'SHW', 'SIVB', 'SJM', 'SLB', 'SMCI', 'SNA', 'SNPS', 'SO', 'SOLV', 'SPG', 'SPGI', 'SPY', 'SRE', 'STE', 'STT', 'STX', 'STZ',
+        'SWK', 'SWKS', 'SYF', 'SYK', 'SYY', 'T', 'TAP', 'TDG', 'TDY', 'TECH', 'TEL', 'TER', 'TFC', 'TFX', 'TGT', 'TJX', 'TMO',
+        'TMUS', 'TPR', 'TRGP', 'TRMB', 'TROW', 'TRV', 'TSCO', 'TSLA', 'TSN', 'TT', 'TTWO', 'TXN', 'TXT', 'TYL', 'UAL', 'UBER',
+        'UDR', 'UHS', 'ULTA', 'UNH', 'UNP', 'UPS', 'URI', 'USB', 'V', 'VFC', 'VICI', 'VLO', 'VLTO', 'VRSK', 'VRSN', 'VRTX', 'VTR',
+        'VTRS', 'VZ', 'WAB', 'WAT', 'WBA', 'WBD', 'WDC', 'WEC', 'WELL', 'WFC', 'WM', 'WMB', 'WMT', 'WRB', 'WST', 'WTW', 'WY',
+        'WYNN', 'XEL', 'XLB', 'XLC', 'XLE', 'XLF', 'XLI', 'XLK', 'XLP', 'XLRE', 'XLU', 'XLV', 'XLY', 'XOM', 'XYL', 'YUM', 'ZBH',
+        'ZBRA', 'ZTS'
+    ]
+    tickers = [t.replace('.', '-') for t in hardcoded]
+    print(f"Using hardcoded list: {len(tickers)} tickers.")
+    return tickers
+
+# Step 2: Function to get P/E, Market Cap, Revenue Growth for a ticker
+@st.cache_data(ttl=60 * 60)
+def get_stock_info(ticker: str):
+    try:
+        info = yf.Ticker(ticker).info
+        pe = info.get("trailingPE")
+        market_cap = info.get("marketCap")
+        name = info.get("longName") or info.get("shortName") or ticker
+
+        if pe and pe > 0 and market_cap:
+            return {
+                "Ticker": ticker,
+                "Company": name,
+                "P/E Ratio": round(pe, 5),
+                "Market Cap (B)": round(market_cap / 1_000_000_000, 2)  # in billions
+            }
+    except Exception:
+        pass
+    return None
+
+def get_pe_ratio(ticker):
+    try:
+        stock = yf.Ticker(ticker)
+        info = stock.info
+        pe = info.get('trailingPE')  # Trailing P/E (TTM)
+        if pe is not None and pe > 0:  # Filter valid positive values
+            return pe
+    except:
+        pass
+    return None
+
+@st.cache_data(ttl=60 * 60)
+def get_revenue_growth_2025_vs_2024(ticker: str) -> Tuple[Optional[pd.DataFrame], Optional[float]]:
+    """
+    Robustly extract Total Revenue for 2024 and 2025 (if present) and compute 2025 vs 2024 YoY growth.
+    Returns a small DataFrame with rows for 2024 and 2025 and the numeric growth for 2025 (percent).
+    """
+    try:
+        stock = yf.Ticker(ticker)
+        financials = stock.financials
+        if financials is None or 'Total Revenue' not in financials.index:
+            # no revenue data available
+            return None, None
+
+        revenue_row = financials.loc['Total Revenue']
+
+        # Build mapping year -> revenue (take last available value for a given year)
+        year_to_revenue: dict[int, float] = {}
+        for col in revenue_row.index:
+            try:
+                year = pd.to_datetime(col).year
+            except Exception:
+                # fallback: try to parse first 4 digits
+                try:
+                    year = int(str(col)[:4])
+                except Exception:
+                    continue
+            val = pd.to_numeric(revenue_row[col], errors='coerce')
+            if pd.isna(val):
+                continue
+            # Keep the value (if multiple columns map to same year, override with latest encountered)
+            year_to_revenue[year] = float(val)
+
+        # Require both years
+        if 2024 not in year_to_revenue or 2025 not in year_to_revenue:
+            return None, None
+
+        rev2024 = year_to_revenue[2024]
+        rev2025 = year_to_revenue[2025]
+
+        # avoid division by zero / invalid numbers
+        if rev2024 == 0 or pd.isna(rev2024) or pd.isna(rev2025):
+            return None, None
+
+        growth = (rev2025 - rev2024) / rev2024 * 100.0
+        growth_rounded = round(growth, 2)
+
+        # Build a clean DataFrame
+        df = pd.DataFrame({
+            "Year": [2024, 2025],
+            "Revenue (B USD)": [round(rev2024 / 1e9, 2), round(rev2025 / 1e9, 2)],
+            "Growth (%)": [None, growth_rounded]
+        })
+
+        return df, growth_rounded
+
+    except Exception as e:
+        print(f"Error fetching revenue for {ticker}: {e}")
+        return None, None
+    
+@st.cache_data(ttl=60 * 60)
+def get_top_growth_companies(tickers: list) -> pd.DataFrame:
+    """
+    From a list of tickers, return a DataFrame of companies that have valid 2025 vs 2024 revenue growth,
+    sorted by descending growth.
+    """
+    results = []
+    for t in tickers:
+        df, growth = get_revenue_growth_2025_vs_2024(t)
+        if growth is None or df is None:
+            continue
+        # safe extraction of revenues
+        try:
+            rev2025 = df.loc[df["Year"] == 2025, "Revenue (B USD)"].iloc[0]
+            rev2024 = df.loc[df["Year"] == 2024, "Revenue (B USD)"].iloc[0]
+        except Exception:
+            continue
+
+        try:
+            info = yf.Ticker(t).info
+            company_name = info.get("longName") or info.get("shortName") or t
+        except Exception:
+            company_name = t
+
+        results.append({
+            "Ticker": t,
+            "Company": company_name,
+            "2025 Revenue (B USD)": rev2025,
+            "2024 Revenue (B USD)": rev2024,
+            "Growth 2025 vs 2024 (%)": growth
+        })
+
+    result_df = pd.DataFrame(results)
+    if result_df.empty:
+        return result_df
+    result_df = result_df.sort_values("Growth 2025 vs 2024 (%)", ascending=False).reset_index(drop=True)
+    return result_df
+
+# Step 3: Collect P/E for all tickers (this may take ~30-60 seconds for 500 tickers)
+tickers = get_sp500_tickers()
+pe_data = []
+for ticker in tickers:
+    pe = get_pe_ratio(ticker)
+    if pe:
+        pe_data.append({'Ticker': ticker, 'P/E Ratio': pe})
+# Progress
+progress = st.progress(0)
+status = st.empty()
+data = []
+
+for i, t in enumerate(tickers):
+    row = get_stock_info(t)
+    if row:
+        data.append(row)
+    if (i + 1) % 10 == 0:
+        progress.progress((i + 1) / len(tickers))
+        status.text(f"Fetching data... {i+1}/{len(tickers)}")
+
+progress.progress(1.0)
+
+df = pd.DataFrame(data)
+
+# Step 4: Convert to DataFrame, sort, and get top 10
+st.subheader("Top 10 by Highest Trailing P/E Ratio")
+top_pe = df.nlargest(10, "P/E Ratio")[["Ticker", "Company", "P/E Ratio"]].reset_index(drop=True)
+st.dataframe(
+    top_pe.style.format({"P/E Ratio": "{:,.5f}"}),
+    use_container_width=True,
+    hide_index=True,
+)
+st.subheader("Top 10 by Largest Market Cap")
+top_cap = df.nlargest(10, "Market Cap (B)")[["Ticker", "Company", "Market Cap (B)"]].reset_index(drop=True)
+st.dataframe(
+    top_cap.style.format({"Market Cap (B)": "{:,.2f}"}),
+    use_container_width=True,
+    hide_index=True,
+)
+st.subheader("Top 10 by Revenue Growth: 2025 vs 2024")
+result_df = get_top_growth_companies(tickers)
+df2 = pd.DataFrame(result_df)
+top_revenue_growth = df2.nlargest(10, "Growth 2025 vs 2024 (%)")[["Ticker", "Company", "2024 Revenue (B USD)", "2025 Revenue (B USD)", "Growth 2025 vs 2024 (%)"]].reset_index(drop=True)
+st.dataframe(
+    top_revenue_growth.style.format({
+        "2024 Revenue (B USD)": "{:,.2f}",
+        "2025 Revenue (B USD)": "{:,.2f}",
+        "Growth 2025 vs 2024 (%)": "{:+.2f}%"
+    }),
+    use_container_width=True,
+    hide_index=True
+)
 
 # Sidebar inputs
 st.sidebar.header("Stock Selection")
