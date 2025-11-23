@@ -33,42 +33,51 @@ github_url = "https://github.com/ejung2017/PythonProject/tree/main"
 
 st.title("📊 Stock Analysis App")
 st.write("Enter a ticker in the sidebar and click Load data and ARIMA Time Series Analysis. \n\nFor more information, please visit [link](%s)." % github_url)
+st.write("Please note that Yahoo Finance may have some issues that the Latest Data and Price & Technical Indicators will be shown empty. Then please refresh the page and try again.")
 
 # Step 1: Fetch S&P 500 ticker list from Wikipedia (reliable source)
 def get_sp500_tickers() -> list[str]:
-    hardcoded = [
-        'A', 'AAL', 'AAPL', 'ABBV', 'ABNB', 'ABT', 'ACGL', 'ACN', 'ADBE', 'ADI', 'ADM', 'ADP', 'ADSK', 'AEE', 'AEP', 'AES', 'AFL',
-        'AIG', 'AIZ', 'AJG', 'AKAM', 'ALB', 'ALGN', 'ALL', 'ALLE', 'AMAT', 'AMCR', 'AMD', 'AME', 'AMGN', 'AMP', 'AMT', 'AMZN', 'ANET',
-        'AON', 'AOS', 'APA', 'APD', 'APH', 'APTV', 'ARE', 'ATO', 'AVB', 'AVGO', 'AWK', 'AXON', 'AXP', 'AZO', 'BA', 'BAC',
-        'BAX', 'BBWI', 'BBY', 'BDX', 'BEN', 'BF-B', 'BG', 'BIIB', 'BIO', 'BK', 'BKNG', 'BKR', 'BLK', 'BLDR', 'BMY', 'BR', 'BRK-B',
-        'BRO', 'BSX', 'BWA', 'BX', 'BXP', 'C', 'CAG', 'CAH', 'CARR', 'CAT', 'CB', 'CBOE', 'CBRE', 'CCI', 'CCL', 'CDNS', 'CDW', 'CE',
-        'CEG', 'CF', 'CFG', 'CHD', 'CHRW', 'CHTR', 'CI', 'CINF', 'CL', 'CLX', 'CMA', 'CMCSA', 'CME', 'CMG', 'CMI', 'CMS', 'CNC', 'CNP',
-        'COF', 'COO', 'COP', 'COR', 'COST', 'CPAY', 'CPB', 'CPRT', 'CPT', 'CRL', 'CRM', 'CSCO', 'CSGP', 'CSX', 'CTAS', 'CTLT', 'CTRA',
-        'CTSH', 'CVS', 'CVX', 'CZR', 'D', 'DAL', 'DAY', 'DE', 'DECK', 'DFS', 'DG', 'DGX', 'DHI', 'DHR', 'DIS', 'DLR', 'DLTR', 'DOC',
-        'DOV', 'DPZ', 'DRI', 'DTE', 'DUK', 'DVA', 'DVN', 'DXCM', 'EA', 'EBAY', 'ECL', 'ED', 'EFX', 'EG', 'EIX', 'EL', 'ELV', 'EMR',
-        'ENPH', 'EOG', 'EPAM', 'EQIX', 'EQR', 'EQT', 'ES', 'ESS', 'ETN', 'ETR', 'ETSY', 'EVRG', 'EW', 'EXC', 'EXPD', 'EXPE', 'EXR',
-        'F', 'FANG', 'FAST', 'FDS', 'FDX', 'FE', 'FFIV', 'FI', 'FICO', 'FICO', 'FIS', 'FITB', 'FOX', 'FOXA', 'FRT', 'FSLR', 'FTNT', 'FTV',
-        'GD', 'GE', 'GEHC', 'GEN', 'GEV', 'GILD', 'GIS', 'GL', 'GLW', 'GM', 'GNRC', 'GOOG', 'GOOGL', 'GPC', 'GPN', 'GRMN', 'GS',
-        'GWW', 'HAL', 'HAS', 'HBAN', 'HCA', 'HD', 'HIG', 'HII', 'HLT', 'HOLX', 'HON', 'HPE', 'HPQ', 'HRL', 'HSIC', 'HST',
-        'HSY', 'HUBB', 'HUM', 'HWM', 'IBM', 'ICE', 'IDXX', 'IEX', 'ILMN', 'INCY', 'INTC', 'INTU', 'INVH', 'IP', 'IPG', 'IQV', 'IR',
-        'IRM', 'ISRG', 'IT', 'ITW', 'IVZ', 'J', 'JBHT', 'JBL', 'JCI', 'JKHY', 'JNJ', 'JNPR', 'JPM', 'K', 'KDP', 'KEY', 'KEYS', 'KHC',
-        'KIM', 'KLAC', 'KMB', 'KMI', 'KMX', 'KO', 'KR', 'KVUE', 'L', 'LDOS', 'LEN', 'LH', 'LHX', 'LKQ', 'LLY', 'LMT', 'LNT', 'LOW',
-        'LRCX', 'LULU', 'LUV', 'LVS', 'LW', 'LYV', 'MA', 'MAA', 'MAR', 'MAS', 'MCD', 'MCHP', 'MCK', 'MCO', 'MDLZ', 'MDT', 'MET',
-        'META', 'MGM', 'MHK', 'MKC', 'MKTX', 'MMC', 'MMM', 'MNST', 'MO', 'MOH', 'MOS', 'MPC', 'MPWR', 'MRK', 'MRNA', 'MRO', 'MS',
-        'MSCI', 'MSFT', 'MSI', 'MTB', 'MTCH', 'MTD', 'MU', 'NCLH', 'NDAQ', 'NDSN', 'NEE', 'NEM', 'NFLX', 'NI', 'NKE', 'NOC', 'NOW',
-        'NRG', 'NSC', 'NTAP', 'NTRS', 'NVDA', 'NVR', 'NWS', 'NWSA', 'NXPI', 'O', 'ODFL', 'OKE', 'OMC', 'ON', 'ORCL', 'ORLY', 'OTIS',
-        'OXY', 'PANW', 'PAYC', 'PAYX', 'PCAR', 'PCG', 'PEG', 'PEP', 'PFE', 'PFG', 'PG', 'PGR', 'PH', 'PHM', 'PKG', 'PLD',
-        'PM', 'PNC', 'PNR', 'PNW', 'PODD', 'POOL', 'PPL', 'PRU', 'PSA', 'PSX', 'PTC', 'PWR', 'PYPL', 'QCOM', 'QRVO', 'RCL', 'REG',
-        'REGN', 'RF', 'RHI', 'RJF', 'RL', 'RMD', 'ROK', 'ROL', 'ROP', 'ROST', 'RSG', 'RTX', 'RVTY', 'SBAC', 'SBUX', 'SCHW', 'SEE',
-        'SHW', 'SIVB', 'SJM', 'SLB', 'SMCI', 'SNA', 'SNPS', 'SO', 'SOLV', 'SPG', 'SPGI', 'SPY', 'SRE', 'STE', 'STT', 'STX', 'STZ',
-        'SWK', 'SWKS', 'SYF', 'SYK', 'SYY', 'T', 'TAP', 'TDG', 'TDY', 'TECH', 'TEL', 'TER', 'TFC', 'TFX', 'TGT', 'TJX', 'TMO',
-        'TMUS', 'TPR', 'TRGP', 'TRMB', 'TROW', 'TRV', 'TSCO', 'TSLA', 'TSN', 'TT', 'TTWO', 'TXN', 'TXT', 'TYL', 'UAL', 'UBER',
-        'UDR', 'UHS', 'ULTA', 'UNH', 'UNP', 'UPS', 'URI', 'USB', 'V', 'VFC', 'VICI', 'VLO', 'VLTO', 'VRSK', 'VRSN', 'VRTX', 'VTR',
-        'VTRS', 'VZ', 'WAB', 'WAT', 'WBA', 'WBD', 'WDC', 'WEC', 'WELL', 'WFC', 'WM', 'WMB', 'WMT', 'WRB', 'WST', 'WTW', 'WY',
-        'WYNN', 'XEL', 'XLB', 'XLC', 'XLE', 'XLF', 'XLI', 'XLK', 'XLP', 'XLRE', 'XLU', 'XLV', 'XLY', 'XOM', 'XYL', 'YUM', 'ZBH',
-        'ZBRA', 'ZTS'
+    # hardcoded = [
+    #     'A', 'AAL', 'AAPL', 'ABBV', 'ABNB', 'ABT', 'ACGL', 'ACN', 'ADBE', 'ADI', 'ADM', 'ADP', 'ADSK', 'AEE', 'AEP', 'AES', 'AFL',
+    #     'AIG', 'AIZ', 'AJG', 'AKAM', 'ALB', 'ALGN', 'ALL', 'ALLE', 'AMAT', 'AMCR', 'AMD', 'AME', 'AMGN', 'AMP', 'AMT', 'AMZN', 'ANET',
+    #     'AON', 'AOS', 'APA', 'APD', 'APH', 'APTV', 'ARE', 'ATO', 'AVB', 'AVGO', 'AWK', 'AXON', 'AXP', 'AZO', 'BA', 'BAC',
+    #     'BAX', 'BBWI', 'BBY', 'BDX', 'BEN', 'BF-B', 'BG', 'BIIB', 'BIO', 'BK', 'BKNG', 'BKR', 'BLK', 'BLDR', 'BMY', 'BR', 'BRK-B',
+    #     'BRO', 'BSX', 'BWA', 'BX', 'BXP', 'C', 'CAG', 'CAH', 'CARR', 'CAT', 'CB', 'CBOE', 'CBRE', 'CCI', 'CCL', 'CDNS', 'CDW', 'CE',
+    #     'CEG', 'CF', 'CFG', 'CHD', 'CHRW', 'CHTR', 'CI', 'CINF', 'CL', 'CLX', 'CMA', 'CMCSA', 'CME', 'CMG', 'CMI', 'CMS', 'CNC', 'CNP',
+    #     'COF', 'COO', 'COP', 'COR', 'COST', 'CPAY', 'CPB', 'CPRT', 'CPT', 'CRL', 'CRM', 'CSCO', 'CSGP', 'CSX', 'CTAS', 'CTLT', 'CTRA',
+    #     'CTSH', 'CVS', 'CVX', 'CZR', 'D', 'DAL', 'DAY', 'DE', 'DECK', 'DFS', 'DG', 'DGX', 'DHI', 'DHR', 'DIS', 'DLR', 'DLTR', 'DOC',
+    #     'DOV', 'DPZ', 'DRI', 'DTE', 'DUK', 'DVA', 'DVN', 'DXCM', 'EA', 'EBAY', 'ECL', 'ED', 'EFX', 'EG', 'EIX', 'EL', 'ELV', 'EMR',
+    #     'ENPH', 'EOG', 'EPAM', 'EQIX', 'EQR', 'EQT', 'ES', 'ESS', 'ETN', 'ETR', 'ETSY', 'EVRG', 'EW', 'EXC', 'EXPD', 'EXPE', 'EXR',
+    #     'F', 'FANG', 'FAST', 'FDS', 'FDX', 'FE', 'FFIV', 'FI', 'FICO', 'FICO', 'FIS', 'FITB', 'FOX', 'FOXA', 'FRT', 'FSLR', 'FTNT', 'FTV',
+    #     'GD', 'GE', 'GEHC', 'GEN', 'GEV', 'GILD', 'GIS', 'GL', 'GLW', 'GM', 'GNRC', 'GOOG', 'GOOGL', 'GPC', 'GPN', 'GRMN', 'GS',
+    #     'GWW', 'HAL', 'HAS', 'HBAN', 'HCA', 'HD', 'HIG', 'HII', 'HLT', 'HOLX', 'HON', 'HPE', 'HPQ', 'HRL', 'HSIC', 'HST',
+    #     'HSY', 'HUBB', 'HUM', 'HWM', 'IBM', 'ICE', 'IDXX', 'IEX', 'ILMN', 'INCY', 'INTC', 'INTU', 'INVH', 'IP', 'IPG', 'IQV', 'IR',
+    #     'IRM', 'ISRG', 'IT', 'ITW', 'IVZ', 'J', 'JBHT', 'JBL', 'JCI', 'JKHY', 'JNJ', 'JNPR', 'JPM', 'K', 'KDP', 'KEY', 'KEYS', 'KHC',
+    #     'KIM', 'KLAC', 'KMB', 'KMI', 'KMX', 'KO', 'KR', 'KVUE', 'L', 'LDOS', 'LEN', 'LH', 'LHX', 'LKQ', 'LLY', 'LMT', 'LNT', 'LOW',
+    #     'LRCX', 'LULU', 'LUV', 'LVS', 'LW', 'LYV', 'MA', 'MAA', 'MAR', 'MAS', 'MCD', 'MCHP', 'MCK', 'MCO', 'MDLZ', 'MDT', 'MET',
+    #     'META', 'MGM', 'MHK', 'MKC', 'MKTX', 'MMC', 'MMM', 'MNST', 'MO', 'MOH', 'MOS', 'MPC', 'MPWR', 'MRK', 'MRNA', 'MRO', 'MS',
+    #     'MSCI', 'MSFT', 'MSI', 'MTB', 'MTCH', 'MTD', 'MU', 'NCLH', 'NDAQ', 'NDSN', 'NEE', 'NEM', 'NFLX', 'NI', 'NKE', 'NOC', 'NOW',
+    #     'NRG', 'NSC', 'NTAP', 'NTRS', 'NVDA', 'NVR', 'NWS', 'NWSA', 'NXPI', 'O', 'ODFL', 'OKE', 'OMC', 'ON', 'ORCL', 'ORLY', 'OTIS',
+    #     'OXY', 'PANW', 'PAYC', 'PAYX', 'PCAR', 'PCG', 'PEG', 'PEP', 'PFE', 'PFG', 'PG', 'PGR', 'PH', 'PHM', 'PKG', 'PLD',
+    #     'PM', 'PNC', 'PNR', 'PNW', 'PODD', 'POOL', 'PPL', 'PRU', 'PSA', 'PSX', 'PTC', 'PWR', 'PYPL', 'QCOM', 'QRVO', 'RCL', 'REG',
+    #     'REGN', 'RF', 'RHI', 'RJF', 'RL', 'RMD', 'ROK', 'ROL', 'ROP', 'ROST', 'RSG', 'RTX', 'RVTY', 'SBAC', 'SBUX', 'SCHW', 'SEE',
+    #     'SHW', 'SIVB', 'SJM', 'SLB', 'SMCI', 'SNA', 'SNPS', 'SO', 'SOLV', 'SPG', 'SPGI', 'SPY', 'SRE', 'STE', 'STT', 'STX', 'STZ',
+    #     'SWK', 'SWKS', 'SYF', 'SYK', 'SYY', 'T', 'TAP', 'TDG', 'TDY', 'TECH', 'TEL', 'TER', 'TFC', 'TFX', 'TGT', 'TJX', 'TMO',
+    #     'TMUS', 'TPR', 'TRGP', 'TRMB', 'TROW', 'TRV', 'TSCO', 'TSLA', 'TSN', 'TT', 'TTWO', 'TXN', 'TXT', 'TYL', 'UAL', 'UBER',
+    #     'UDR', 'UHS', 'ULTA', 'UNH', 'UNP', 'UPS', 'URI', 'USB', 'V', 'VFC', 'VICI', 'VLO', 'VLTO', 'VRSK', 'VRSN', 'VRTX', 'VTR',
+    #     'VTRS', 'VZ', 'WAB', 'WAT', 'WBA', 'WBD', 'WDC', 'WEC', 'WELL', 'WFC', 'WM', 'WMB', 'WMT', 'WRB', 'WST', 'WTW', 'WY',
+    #     'WYNN', 'XEL', 'XLB', 'XLC', 'XLE', 'XLF', 'XLI', 'XLK', 'XLP', 'XLRE', 'XLU', 'XLV', 'XLY', 'XOM', 'XYL', 'YUM', 'ZBH',
+    #     'ZBRA', 'ZTS'
+    # ]
+    top_50_sp_500_tickers = [
+    'NVDA', 'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'GOOG', 'AVGO', 'META', 'TSLA', 'BRK.B',
+    'LLY', 'WMT', 'JPM', 'V', 'ORCL', 'XOM', 'JNJ', 'MA', 'NFLX', 'ABBV',
+    'COST', 'BAC', 'PLTR', 'PG', 'HD', 'AMD', 'KO', 'GE', 'CSCO', 'CVX',
+    'UNH', 'IBM', 'WFC', 'CAT', 'MS', 'AXP', 'GS', 'MRK', 'PM', 'TMUS',
+    'MU', 'RTX', 'ABT', 'TMO', 'MCD', 'CRM', 'PEP', 'ISRG', 'LIN', 'DIS'
     ]
-    tickers = [t.replace('.', '-') for t in hardcoded]
+
+    tickers = [t.replace('.', '-') for t in top_50_sp_500_tickers]
     print(f"Using hardcoded list: {len(tickers)} tickers.")
     return tickers
 
@@ -77,29 +86,18 @@ def get_sp500_tickers() -> list[str]:
 def get_stock_info(ticker: str):
     try:
         info = yf.Ticker(ticker).info
-        pe = info.get("trailingPE")
-        market_cap = info.get("marketCap")
+        pe = info.get("trailingPE") 
+        market_cap = info.get("marketCap") 
         name = info.get("longName") or info.get("shortName") or ticker
 
         if pe and pe > 0 and market_cap:
             return {
                 "Ticker": ticker,
                 "Company": name,
-                "P/E Ratio": round(pe, 5),
-                "Market Cap (B)": round(market_cap / 1_000_000_000, 2)  # in billions
+                "P/E Ratio": round(pe, 2),
+                "Market Cap (B)": round(market_cap / 1000000000, 2)  # in billions
             }
     except Exception:
-        pass
-    return None
-
-def get_pe_ratio(ticker):
-    try:
-        stock = yf.Ticker(ticker)
-        info = stock.info
-        pe = info.get('trailingPE')  # Trailing P/E (TTM)
-        if pe is not None and pe > 0:  # Filter valid positive values
-            return pe
-    except:
         pass
     return None
 
@@ -202,11 +200,7 @@ def get_top_growth_companies(tickers: list) -> pd.DataFrame:
 
 # Step 3: Collect P/E for all tickers (this may take ~30-60 seconds for 500 tickers)
 tickers = get_sp500_tickers()
-pe_data = []
-for ticker in tickers:
-    pe = get_pe_ratio(ticker)
-    if pe:
-        pe_data.append({'Ticker': ticker, 'P/E Ratio': pe})
+
 # Progress
 progress = st.progress(0)
 status = st.empty()
@@ -225,33 +219,6 @@ progress.progress(1.0)
 df = pd.DataFrame(data)
 
 # Step 4: Convert to DataFrame, sort, and get top 10
-st.subheader("Top 10 by Highest Trailing P/E Ratio")
-top_pe = df.nlargest(10, "P/E Ratio")[["Ticker", "Company", "P/E Ratio"]].reset_index(drop=True)
-st.dataframe(
-    top_pe.style.format({"P/E Ratio": "{:,.5f}"}),
-    use_container_width=True,
-    hide_index=True,
-)
-st.subheader("Top 10 by Largest Market Cap")
-top_cap = df.nlargest(10, "Market Cap (B)")[["Ticker", "Company", "Market Cap (B)"]].reset_index(drop=True)
-st.dataframe(
-    top_cap.style.format({"Market Cap (B)": "{:,.2f}"}),
-    use_container_width=True,
-    hide_index=True,
-)
-st.subheader("Top 10 by Revenue Growth: 2025 vs 2024")
-result_df = get_top_growth_companies(tickers)
-df2 = pd.DataFrame(result_df)
-top_revenue_growth = df2.nlargest(10, "Growth 2025 vs 2024 (%)")[["Ticker", "Company", "2024 Revenue (B USD)", "2025 Revenue (B USD)", "Growth 2025 vs 2024 (%)"]].reset_index(drop=True)
-st.dataframe(
-    top_revenue_growth.style.format({
-        "2024 Revenue (B USD)": "{:,.2f}",
-        "2025 Revenue (B USD)": "{:,.2f}",
-        "Growth 2025 vs 2024 (%)": "{:+.2f}%"
-    }),
-    use_container_width=True,
-    hide_index=True
-)
 
 # Sidebar inputs
 st.sidebar.header("Stock Selection")
@@ -259,7 +226,6 @@ ticker = st.sidebar.text_input("Ticker (e.g. AAPL):", value="")
 START_default = pd.to_datetime("2024-01-01").date()
 START = st.sidebar.date_input("Start date", value=START_default)
 END = st.sidebar.date_input("End date", value=date.today())
-pred_days = st.sidebar.radio("Stock price prediction after how many days?", ["1 Day", "15 Days", "1 Month"])
 load_btn = st.sidebar.button("Load data")
 
 
@@ -448,7 +414,7 @@ if load_btn:
     st.pyplot(fig_cross)
 
     # ARIMA Forecast
-    st.subheader(f"ARIMA Forecast of {ticker} after {pred_days}")
+    st.subheader(f"ARIMA Forecast of {ticker}")
     series = data['Close']
     
     model = pm.auto_arima(
@@ -468,34 +434,109 @@ if load_btn:
     best_p, best_d, best_q = model.order
     st.write(f"Best (p, d, q) orders: {best_p, best_d, best_q}")
 
-    # ARIMA (p=1, d=1, q=1)
+    # ARIMA 
     model = ARIMA(series, order=(best_p, best_d, best_q))
     model_fit = model.fit()
 
-    # Forecast
-    if pred_days == "1 Day": 
-        forecast = model_fit.forecast(steps=1)
-    elif pred_days == "15 Days": 
-        forecast = model_fit.forecast(steps=15)
-    else: 
-        forecast = model_fit.forecast(steps=30)
-    st.write(f"The stock price after {pred_days} is forecasted to be ${forecast.iloc[0]:.2f}")
+    # get forecast (no confidence intervals)
+    try:
+        forecast_res = model_fit.get_forecast(steps=5)
+        forecast_mean = forecast_res.predicted_mean
+    except Exception:
+        # fallback to simple forecast array if get_forecast isn't available
+        forecast_mean = model_fit.forecast(steps=5)
 
-    # # Calculate MAE
-    # mae = mean_absolute_error(series, forecast)
-    # st.write(f"Mean Absolute Error (MAE): {mae:.3f}")
+    # build future dates (5 business days after last date)
+    last_date = series.index[-1]
+    future_index = pd.bdate_range(start=last_date + pd.Timedelta(days=1), periods=len(forecast_mean))
 
-    # # Calculate MSE
-    # mse = mean_squared_error(series, forecast)
-    # st.write(f"Mean Squared Error (MSE): {mse:.3f}")
+    # create series with the new index
+    forecast_series = pd.Series(forecast_mean.values, index=future_index)
 
-    # # Calculate RMSE
-    # rmse = np.sqrt(mse)
-    # st.write(f"Root Mean Squared Error (RMSE): {rmse:.3f}")
+    # extended series for plotting continuity
+    extended = pd.concat([series, forecast_series])
 
-    # # Calculate MAPE (handling potential division by zero for actual_values == 0)
-    # def calculate_mape(y_true, y_pred):
-    #     return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+    # Plot only the latest 1 month of historical Close + next 5 business days forecast
+    one_month_ago = series.index[-1] - pd.Timedelta(days=30)
+    start_plot = max(one_month_ago, series.index[0])
+    hist_plot = series.loc[start_plot:series.index[-1]]
 
-    # mape = calculate_mape(series, forecast)
-    # st.write(f"Mean Absolute Percentage Error (MAPE): {mape:.3f}%")
+    fig_arima, ax_arima = plt.subplots(figsize=(10, 4))
+    ax_arima.plot(hist_plot.index, hist_plot, label='Close (last 1 month)', color='black')
+    ax_arima.plot(forecast_series.index, forecast_series, label='ARIMA Forecast (5 days)', color='red', linestyle='--')
+
+    # set x-axis to show from start_plot through last forecast date
+    ax_arima.set_xlim(start_plot, future_index[-1])
+    ax_arima.legend()
+    ax_arima.set_title(f"{ticker} — Close and 5-day ARIMA Forecast")
+    ax_arima.set_xlabel("Date")
+    ax_arima.set_ylabel("Price")
+    fig_arima.autofmt_xdate()
+    fig_arima.tight_layout()
+    st.pyplot(fig_arima)
+
+    # Show the 5-day forecast values below the chart
+    forecast_df = pd.DataFrame({
+        "Date": forecast_series.index.date,
+        "Forecast Price": forecast_series.values
+    })
+    forecast_df["Forecast Price"] = forecast_df["Forecast Price"].round(2)
+    st.subheader("5-day ARIMA Forecast")
+    st.dataframe(forecast_df.set_index("Date"), use_container_width=True, hide_index=False)
+
+# Show the three top-10 tables only when the user has NOT clicked Load data
+if not load_btn:
+    st.subheader("Top 10 by Highest Trailing P/E Ratio")
+    top_pe = df.nlargest(10, "P/E Ratio")[["Ticker", "Company", "P/E Ratio"]].reset_index(drop=True)
+    st.dataframe(
+        top_pe.style.format({"P/E Ratio": "{:,.5f}"}),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    st.subheader("Top 10 by Largest Market Cap")
+    top_cap = df.nlargest(10, "Market Cap (B)")[["Ticker", "Company", "Market Cap (B)"]].reset_index(drop=True)
+    st.dataframe(
+        top_cap.style.format({"Market Cap (B)": "{:,.2f}"}),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    st.subheader("Top 10 by Revenue Growth: 2025 vs 2024")
+    result_df = get_top_growth_companies(tickers)
+
+    # Robust handling: empty results, column name detection, numeric coercion
+    if result_df is None or result_df.empty:
+        st.info("No companies with both 2024 and 2025 reported revenues were found.")
+    else:
+        df_growth = result_df.copy()
+
+        # find a candidate growth column (case-insensitive)
+        growth_candidates = [c for c in df_growth.columns if "growth" in c.lower()]
+        if not growth_candidates:
+            st.warning(f"No growth column found. Available columns: {', '.join(df_growth.columns)}")
+        else:
+            growth_col = growth_candidates[0]
+            # coerce to numeric (drop non-numeric)
+            df_growth[growth_col] = pd.to_numeric(df_growth[growth_col], errors="coerce")
+            df_growth = df_growth.dropna(subset=[growth_col])
+
+            # normalize column name used downstream
+            if growth_col != "Growth 2025 vs 2024 (%)":
+                df_growth = df_growth.rename(columns={growth_col: "Growth 2025 vs 2024 (%)"})
+
+            required_cols = ["Ticker", "Company", "2024 Revenue (B USD)", "2025 Revenue (B USD)", "Growth 2025 vs 2024 (%)"]
+            missing = [c for c in required_cols if c not in df_growth.columns]
+            if missing:
+                st.warning(f"Missing columns for display: {missing}. Available columns: {', '.join(df_growth.columns)}")
+            else:
+                top_revenue_growth = df_growth.nlargest(10, "Growth 2025 vs 2024 (%)")[required_cols].reset_index(drop=True)
+                st.dataframe(
+                    top_revenue_growth.style.format({
+                        "2024 Revenue (B USD)": "{:,.2f}",
+                        "2025 Revenue (B USD)": "{:,.2f}",
+                        "Growth 2025 vs 2024 (%)": "{:+.2f}%"
+                    }),
+                    use_container_width=True,
+                    hide_index=True
+                )
