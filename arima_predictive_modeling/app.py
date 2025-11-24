@@ -461,14 +461,21 @@ if load_btn:
     start_plot = max(one_month_ago, series.index[0])
     hist_plot = series.loc[start_plot:series.index[-1]]
 
+    # create a combined series so the line is continuous between last historical point and first forecast point
+    combined = pd.concat([hist_plot, forecast_series]).sort_index()
+
     fig_arima, ax_arima = plt.subplots(figsize=(10, 4))
-    ax_arima.plot(hist_plot.index, hist_plot, label='Close (last 1 month)', color='black')
-    ax_arima.plot(forecast_series.index, forecast_series, label='ARIMA Forecast (5 days)', color='red', linestyle='--')
+    # draw continuous line (connects across non-trading days)
+    ax_arima.plot(combined.index, combined.values, label='Close (connected)', color='black', alpha=0.6)
+    # emphasize recent historical region
+    ax_arima.plot(hist_plot.index, hist_plot.values, label='Close (last 1 month)', color='black', linewidth=1.5)
+    # highlight forecast region
+    ax_arima.plot(forecast_series.index, forecast_series.values, label='ARIMA Forecast (5 days)', color='red', linestyle='--', linewidth=1.5)
 
     # set x-axis to show from start_plot through last forecast date
     ax_arima.set_xlim(start_plot, future_index[-1])
     ax_arima.legend()
-    ax_arima.set_title(f"{ticker} — Close and 5-day ARIMA Forecast")
+    ax_arima.set_title(f"{ticker} — Last 1 month Close and 5-day ARIMA Forecast")
     ax_arima.set_xlabel("Date")
     ax_arima.set_ylabel("Price")
     fig_arima.autofmt_xdate()
