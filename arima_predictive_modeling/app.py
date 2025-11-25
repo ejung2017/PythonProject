@@ -416,24 +416,9 @@ if load_btn:
     # ARIMA Forecast
     st.subheader(f"ARIMA Forecast of {ticker}")
     series = data['Close']
+
+    best_p, best_d, best_q = 5,5,5
     
-    model = pm.auto_arima(
-        series,  # Your time series data
-        start_p=1, max_p=5,  # Range for p (autoregressive order)
-        start_q=1, max_q=5,  # Range for q (moving average order)
-        d=None, max_d=2,  # Order of differencing (auto-determined if None)
-        seasonal=False,  # Set to True for SARIMA, then define P, D, Q, m
-        information_criterion='aic',  # Criterion for model selection
-        trace=True,  # Print model fitting progress
-        error_action='ignore',  # Ignore errors during model fitting
-        suppress_warnings=True,  # Suppress warnings
-        stepwise=True,  # Use stepwise search for efficiency
-        n_jobs=-1  # Use all available cores for parallel processing
-    )
-
-    best_p, best_d, best_q = model.order
-    st.write(f"Best (p, d, q) orders: {best_p, best_d, best_q}")
-
     # ARIMA 
     model = ARIMA(series, order=(best_p, best_d, best_q))
     model_fit = model.fit()
