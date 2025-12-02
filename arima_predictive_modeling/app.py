@@ -11,16 +11,17 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 from io import StringIO  
 from typing import Optional, Tuple
 
-# import seaborn as sns
-# from sklearn.model_selection import train_test_split
-# from sklearn.metrics import accuracy_score, classification_report
-# from sklearn.linear_model import LogisticRegression
-# from sklearn.svm import SVC
-# from sklearn.neighbors import KNeighborsClassifier
-# from sklearn.naive_bayes import GaussianNB
-# from sklearn.tree import DecisionTreeClassifier
-# from sklearn.ensemble import RandomForestClassifier
-# from sklearn.preprocessing import StandardScaler
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn import tree
 
 st.set_page_config(
     page_title="📊 ARIMA Time Series Stock Analysis App",
@@ -33,7 +34,7 @@ github_url = "https://github.com/ejung2017/PythonProject/tree/main"
 
 st.title("📊 Stock Analysis App")
 st.write("Enter a ticker in the sidebar and click Load data and ARIMA Time Series Analysis. \n\nFor more information, please visit [link](%s)." % github_url)
-st.write("Please note that Yahoo Finance may have some issues that the Latest Data and Price & Technical Indicators will be shown empty. Then please refresh the page and try again.")
+st.write("Please note that Yahoo Finance may have some issues that the Latest Data and Price & Technical Indicators will be shown empty. If so, please refresh the page and try again.")
 
 # Step 1: Fetch S&P 500 ticker list from Wikipedia (reliable source)
 def get_sp500_tickers() -> list[str]:
@@ -233,7 +234,7 @@ if load_btn:
     data = yf.download(ticker, start=START, end=END) 
 
     data.columns = data.columns.droplevel('Ticker')
-    data['Daily Return'] = data['Close'].pct_change()
+    data['Daily_Return'] = data['Close'].pct_change()
 
     data["SMA20"] = talib.SMA(data["Close"], timeperiod=20)
     data["EMA60"] = talib.EMA(data["Close"], timeperiod=60)
@@ -289,8 +290,8 @@ if load_btn:
     ax[0].set_ylabel("Price")
     ax[0].legend(loc='best')
 
-    ax[1].plot(data['Daily Return'], label='Daily Return', color='tab:orange')
-    ax[1].set_ylabel("Daily Return")
+    ax[1].plot(data['Daily_Return'], label='Daily_Return', color='tab:orange')
+    ax[1].set_ylabel("Daily_Return")
     ax[1].legend(loc='best')
 
     fig.tight_layout()
@@ -418,7 +419,7 @@ if load_btn:
     series = data['Close']
 
     best_p, best_d, best_q = 5,5,5
-    
+
     # ARIMA 
     model = ARIMA(series, order=(best_p, best_d, best_q))
     model_fit = model.fit()
@@ -475,6 +476,50 @@ if load_btn:
     forecast_df["Forecast Price"] = forecast_df["Forecast Price"].round(2)
     st.subheader("5-day ARIMA Forecast")
     st.dataframe(forecast_df.set_index("Date"), use_container_width=True, hide_index=False)
+
+    #ML to predict next day's return (+ or -)
+    data['Return'] = data['Daily_Return'].shift(-1)
+    threshold = 0.5
+    data.loc[data['Return']>=0.05, 'label'] = 1
+    data.loc[data['Return']<0.05, 'label'] = -1
+    data['label'].fillna(0, inplace=True)
+    data["ADX"] = talib.ADX(data['High'], data['Low'], data["Close"], timeperiod=14)
+    data["OBV"] = talib.OBV(data["Close"], data['Volume'])
+
+    x_col = ['MACD', 'MACD_SIGNAL', 'MACD_HIST', 'SMA20', 'EMA60', 'RSI14', 'BB_lower', 'BB_middle', 'BB_upper', 'ATR', 'ADX', 'OBV']
+    y_col = ['label']
+
+    X = data[x_col]
+    y = data[y_col]
+
+    X_train = X[:-1]
+    X_test = X[-1:]
+    y_train = y[:-1]
+    y_test = y[-1:]
+
+    st.subheader(f"Machine Learning Predictions of {ticker}")
+
+    #Decision Tree
+    clf = tree.DecisionTreeClassifier()
+    clf = clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_test)
+    status = "Buy 📈" if y_pred == 1 else "Sell 📉"
+    st.write(f"Decision Tree prediction: {status}")
+
+    # #KNN 
+    # knn = KNeighborsClassifier()
+    # knn.fit(X_train, y_train)
+    # y_pred = knn.predict(X_test)
+    # status = "Buy 📈" if y_pred == 1 else "Sell 📉"
+    # print(f"KNN prediction: {status}")
+
+    # #SVM
+    # svm = SVC()
+    # svm.fit(X_train, y_train)
+    # y_pred = svm.predict(X_test)
+    # status = "Buy 📈" if y_pred == 1 else "Sell 📉"
+    # print(f"SVM prediction: {status}")
+
 
 # Show the three top-10 tables only when the user has NOT clicked Load data
 if not load_btn:
