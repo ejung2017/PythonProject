@@ -13,7 +13,7 @@ from typing import Optional, Tuple
 
 import seaborn as sns
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, ConfusionMatrixDisplay
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
@@ -30,46 +30,39 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-github_url = "https://github.com/ejung2017/PythonProject/tree/main"
+# --- allow navigation via URL query param and show top-right Home link ---
+params = st.query_params()
+if "page" in params:
+    st.session_state.page = params["page"][0]
 
-st.title("📊 Stock Analysis App")
-st.write("Enter a ticker in the sidebar and click Load data and ARIMA Time Series Analysis. \n\nFor more information, please visit [link](%s)." % github_url)
-st.write("Please note that Yahoo Finance may have some issues that the Latest Data and Price & Technical Indicators will be shown empty. If so, please refresh the page and try again.")
+st.markdown(
+    "<div style='position:fixed; top:8px; right:16px; z-index:9999;'>"
+    "<a href='?page=landing' style='background:#f0f2f6; padding:6px 10px; border-radius:6px; text-decoration:none; color:#111;'>🏠 Home</a>"
+    "</div>",
+    unsafe_allow_html=True,
+)
+
+# Sidebar inputs
+st.sidebar.header("Stock Selection")
+ticker = st.sidebar.text_input("Ticker (e.g. AAPL):", value="")
+START_default = pd.to_datetime("2020-01-01").date()
+START = st.sidebar.date_input("Start date", value=START_default)
+END = st.sidebar.date_input("End date", value=date.today())
+
+# show Load button (remove the Back button)
+col1, col2 = st.sidebar.columns(2)
+with col1:
+    if st.button("Load Data", use_container_width=True):
+        st.session_state.page = "analysis"
+        st.query_params(page="analysis")
+        st.rerun()
+# with col2:
+#     # left intentionally blank to keep layout balanced (Back button removed)
+#     st.write("")
 
 # Step 1: Fetch S&P 500 ticker list from Wikipedia (reliable source)
+@st.cache_data # indefinitely 
 def get_sp500_tickers() -> list[str]:
-    # hardcoded = [
-    #     'A', 'AAL', 'AAPL', 'ABBV', 'ABNB', 'ABT', 'ACGL', 'ACN', 'ADBE', 'ADI', 'ADM', 'ADP', 'ADSK', 'AEE', 'AEP', 'AES', 'AFL',
-    #     'AIG', 'AIZ', 'AJG', 'AKAM', 'ALB', 'ALGN', 'ALL', 'ALLE', 'AMAT', 'AMCR', 'AMD', 'AME', 'AMGN', 'AMP', 'AMT', 'AMZN', 'ANET',
-    #     'AON', 'AOS', 'APA', 'APD', 'APH', 'APTV', 'ARE', 'ATO', 'AVB', 'AVGO', 'AWK', 'AXON', 'AXP', 'AZO', 'BA', 'BAC',
-    #     'BAX', 'BBWI', 'BBY', 'BDX', 'BEN', 'BF-B', 'BG', 'BIIB', 'BIO', 'BK', 'BKNG', 'BKR', 'BLK', 'BLDR', 'BMY', 'BR', 'BRK-B',
-    #     'BRO', 'BSX', 'BWA', 'BX', 'BXP', 'C', 'CAG', 'CAH', 'CARR', 'CAT', 'CB', 'CBOE', 'CBRE', 'CCI', 'CCL', 'CDNS', 'CDW', 'CE',
-    #     'CEG', 'CF', 'CFG', 'CHD', 'CHRW', 'CHTR', 'CI', 'CINF', 'CL', 'CLX', 'CMA', 'CMCSA', 'CME', 'CMG', 'CMI', 'CMS', 'CNC', 'CNP',
-    #     'COF', 'COO', 'COP', 'COR', 'COST', 'CPAY', 'CPB', 'CPRT', 'CPT', 'CRL', 'CRM', 'CSCO', 'CSGP', 'CSX', 'CTAS', 'CTLT', 'CTRA',
-    #     'CTSH', 'CVS', 'CVX', 'CZR', 'D', 'DAL', 'DAY', 'DE', 'DECK', 'DFS', 'DG', 'DGX', 'DHI', 'DHR', 'DIS', 'DLR', 'DLTR', 'DOC',
-    #     'DOV', 'DPZ', 'DRI', 'DTE', 'DUK', 'DVA', 'DVN', 'DXCM', 'EA', 'EBAY', 'ECL', 'ED', 'EFX', 'EG', 'EIX', 'EL', 'ELV', 'EMR',
-    #     'ENPH', 'EOG', 'EPAM', 'EQIX', 'EQR', 'EQT', 'ES', 'ESS', 'ETN', 'ETR', 'ETSY', 'EVRG', 'EW', 'EXC', 'EXPD', 'EXPE', 'EXR',
-    #     'F', 'FANG', 'FAST', 'FDS', 'FDX', 'FE', 'FFIV', 'FI', 'FICO', 'FICO', 'FIS', 'FITB', 'FOX', 'FOXA', 'FRT', 'FSLR', 'FTNT', 'FTV',
-    #     'GD', 'GE', 'GEHC', 'GEN', 'GEV', 'GILD', 'GIS', 'GL', 'GLW', 'GM', 'GNRC', 'GOOG', 'GOOGL', 'GPC', 'GPN', 'GRMN', 'GS',
-    #     'GWW', 'HAL', 'HAS', 'HBAN', 'HCA', 'HD', 'HIG', 'HII', 'HLT', 'HOLX', 'HON', 'HPE', 'HPQ', 'HRL', 'HSIC', 'HST',
-    #     'HSY', 'HUBB', 'HUM', 'HWM', 'IBM', 'ICE', 'IDXX', 'IEX', 'ILMN', 'INCY', 'INTC', 'INTU', 'INVH', 'IP', 'IPG', 'IQV', 'IR',
-    #     'IRM', 'ISRG', 'IT', 'ITW', 'IVZ', 'J', 'JBHT', 'JBL', 'JCI', 'JKHY', 'JNJ', 'JNPR', 'JPM', 'K', 'KDP', 'KEY', 'KEYS', 'KHC',
-    #     'KIM', 'KLAC', 'KMB', 'KMI', 'KMX', 'KO', 'KR', 'KVUE', 'L', 'LDOS', 'LEN', 'LH', 'LHX', 'LKQ', 'LLY', 'LMT', 'LNT', 'LOW',
-    #     'LRCX', 'LULU', 'LUV', 'LVS', 'LW', 'LYV', 'MA', 'MAA', 'MAR', 'MAS', 'MCD', 'MCHP', 'MCK', 'MCO', 'MDLZ', 'MDT', 'MET',
-    #     'META', 'MGM', 'MHK', 'MKC', 'MKTX', 'MMC', 'MMM', 'MNST', 'MO', 'MOH', 'MOS', 'MPC', 'MPWR', 'MRK', 'MRNA', 'MRO', 'MS',
-    #     'MSCI', 'MSFT', 'MSI', 'MTB', 'MTCH', 'MTD', 'MU', 'NCLH', 'NDAQ', 'NDSN', 'NEE', 'NEM', 'NFLX', 'NI', 'NKE', 'NOC', 'NOW',
-    #     'NRG', 'NSC', 'NTAP', 'NTRS', 'NVDA', 'NVR', 'NWS', 'NWSA', 'NXPI', 'O', 'ODFL', 'OKE', 'OMC', 'ON', 'ORCL', 'ORLY', 'OTIS',
-    #     'OXY', 'PANW', 'PAYC', 'PAYX', 'PCAR', 'PCG', 'PEG', 'PEP', 'PFE', 'PFG', 'PG', 'PGR', 'PH', 'PHM', 'PKG', 'PLD',
-    #     'PM', 'PNC', 'PNR', 'PNW', 'PODD', 'POOL', 'PPL', 'PRU', 'PSA', 'PSX', 'PTC', 'PWR', 'PYPL', 'QCOM', 'QRVO', 'RCL', 'REG',
-    #     'REGN', 'RF', 'RHI', 'RJF', 'RL', 'RMD', 'ROK', 'ROL', 'ROP', 'ROST', 'RSG', 'RTX', 'RVTY', 'SBAC', 'SBUX', 'SCHW', 'SEE',
-    #     'SHW', 'SIVB', 'SJM', 'SLB', 'SMCI', 'SNA', 'SNPS', 'SO', 'SOLV', 'SPG', 'SPGI', 'SPY', 'SRE', 'STE', 'STT', 'STX', 'STZ',
-    #     'SWK', 'SWKS', 'SYF', 'SYK', 'SYY', 'T', 'TAP', 'TDG', 'TDY', 'TECH', 'TEL', 'TER', 'TFC', 'TFX', 'TGT', 'TJX', 'TMO',
-    #     'TMUS', 'TPR', 'TRGP', 'TRMB', 'TROW', 'TRV', 'TSCO', 'TSLA', 'TSN', 'TT', 'TTWO', 'TXN', 'TXT', 'TYL', 'UAL', 'UBER',
-    #     'UDR', 'UHS', 'ULTA', 'UNH', 'UNP', 'UPS', 'URI', 'USB', 'V', 'VFC', 'VICI', 'VLO', 'VLTO', 'VRSK', 'VRSN', 'VRTX', 'VTR',
-    #     'VTRS', 'VZ', 'WAB', 'WAT', 'WBA', 'WBD', 'WDC', 'WEC', 'WELL', 'WFC', 'WM', 'WMB', 'WMT', 'WRB', 'WST', 'WTW', 'WY',
-    #     'WYNN', 'XEL', 'XLB', 'XLC', 'XLE', 'XLF', 'XLI', 'XLK', 'XLP', 'XLRE', 'XLU', 'XLV', 'XLY', 'XOM', 'XYL', 'YUM', 'ZBH',
-    #     'ZBRA', 'ZTS'
-    # ]
     top_50_sp_500_tickers = [
     'NVDA', 'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'GOOG', 'AVGO', 'META', 'TSLA', 'BRK.B',
     'LLY', 'WMT', 'JPM', 'V', 'ORCL', 'XOM', 'JNJ', 'MA', 'NFLX', 'ABBV',
@@ -83,7 +76,7 @@ def get_sp500_tickers() -> list[str]:
     return tickers
 
 # Step 2: Function to get P/E, Market Cap, Revenue Growth for a ticker
-@st.cache_data(ttl=60 * 60)
+@st.cache_data
 def get_stock_info(ticker: str):
     try:
         info = yf.Ticker(ticker).info
@@ -102,7 +95,7 @@ def get_stock_info(ticker: str):
         pass
     return None
 
-@st.cache_data(ttl=60 * 60)
+@st.cache_data
 def get_revenue_growth_2025_vs_2024(ticker: str) -> Tuple[Optional[pd.DataFrame], Optional[float]]:
     """
     Robustly extract Total Revenue for 2024 and 2025 (if present) and compute 2025 vs 2024 YoY growth.
@@ -161,7 +154,7 @@ def get_revenue_growth_2025_vs_2024(ticker: str) -> Tuple[Optional[pd.DataFrame]
         print(f"Error fetching revenue for {ticker}: {e}")
         return None, None
     
-@st.cache_data(ttl=60 * 60)
+@st.cache_data
 def get_top_growth_companies(tickers: list) -> pd.DataFrame:
     """
     From a list of tickers, return a DataFrame of companies that have valid 2025 vs 2024 revenue growth,
@@ -199,51 +192,186 @@ def get_top_growth_companies(tickers: list) -> pd.DataFrame:
     result_df = result_df.sort_values("Growth 2025 vs 2024 (%)", ascending=False).reset_index(drop=True)
     return result_df
 
-# Step 3: Collect P/E for all tickers (this may take ~30-60 seconds for 500 tickers)
-tickers = get_sp500_tickers()
+# --- Navigation state (landing / analysis) ---
+if "page" not in st.session_state:
+    st.session_state.page = "landing"
+    github_url = "https://github.com/ejung2017/PythonProject/tree/main"
 
-# Progress
-progress = st.progress(0)
-status = st.empty()
-data = []
+    st.title("📊 Stock Analysis App")
+    st.write("Enter a ticker in the sidebar and click Load data and ARIMA Time Series Analysis. \n\nFor more information, please visit [link](%s)." % github_url)
+    st.write("Please note that Yahoo Finance may have some issues that the Latest Data and Price & Technical Indicators will be shown empty. If so, please refresh the page and try again.")
 
-for i, t in enumerate(tickers):
-    row = get_stock_info(t)
-    if row:
-        data.append(row)
-    if (i + 1) % 10 == 0:
-        progress.progress((i + 1) / len(tickers))
-        status.text(f"Fetching data... {i+1}/{len(tickers)}")
+    # Step 3: Collect P/E for all tickers (this may take ~30-60 seconds for 500 tickers)
+    tickers = get_sp500_tickers()
 
-progress.progress(1.0)
+    # Progress
+    progress = st.progress(0)
+    status = st.empty()
+    data = []
 
-df = pd.DataFrame(data)
+    for i, t in enumerate(tickers):
+        row = get_stock_info(t)
+        if row:
+            data.append(row)
+        if (i + 1) % 10 == 0:
+            progress.progress((i + 1) / len(tickers))
+            status.text(f"Fetching data... {i+1}/{len(tickers)}")
+            
+    # Clean up UI
+    progress.empty()
+    status.empty()
+    st.success(f"Data fetching complete! Loaded {len(data)} stocks.")
 
-# Step 4: Convert to DataFrame, sort, and get top 10
+    df = pd.DataFrame(data)
 
-# Sidebar inputs
-st.sidebar.header("Stock Selection")
-ticker = st.sidebar.text_input("Ticker (e.g. AAPL):", value="")
-START_default = pd.to_datetime("2024-01-01").date()
-START = st.sidebar.date_input("Start date", value=START_default)
-END = st.sidebar.date_input("End date", value=date.today())
-load_btn = st.sidebar.button("Load data")
+    # Show the three top-10 tables only when the user has NOT clicked Load data
+    st.subheader("Top 10 by Highest Trailing P/E Ratio")
+    top_pe = df.nlargest(10, "P/E Ratio")[["Ticker", "Company", "P/E Ratio"]].reset_index(drop=True)
+    st.dataframe(
+        top_pe.style.format({"P/E Ratio": "{:,.5f}"}),
+        use_container_width=True,
+        hide_index=True,
+    )
 
+    st.subheader("Top 10 by Largest Market Cap")
+    top_cap = df.nlargest(10, "Market Cap (B)")[["Ticker", "Company", "Market Cap (B)"]].reset_index(drop=True)
+    st.dataframe(
+        top_cap.style.format({"Market Cap (B)": "{:,.2f}"}),
+        use_container_width=True,
+        hide_index=True,
+    )
 
-if load_btn: 
+    st.subheader("Top 10 by Revenue Growth: 2025 vs 2024")
+    result_df = get_top_growth_companies(tickers)
+
+    # Robust handling: empty results, column name detection, numeric coercion
+    if result_df is None or result_df.empty:
+        st.info("No companies with both 2024 and 2025 reported revenues were found.")
+    else:
+        df_growth = result_df.copy()
+
+        # find a candidate growth column (case-insensitive)
+        growth_candidates = [c for c in df_growth.columns if "growth" in c.lower()]
+        if not growth_candidates:
+            st.warning(f"No growth column found. Available columns: {', '.join(df_growth.columns)}")
+        else:
+            growth_col = growth_candidates[0]
+            # coerce to numeric (drop non-numeric)
+            df_growth[growth_col] = pd.to_numeric(df_growth[growth_col], errors="coerce")
+            df_growth = df_growth.dropna(subset=[growth_col])
+
+            # normalize column name used downstream
+            if growth_col != "Growth 2025 vs 2024 (%)":
+                df_growth = df_growth.rename(columns={growth_col: "Growth 2025 vs 2024 (%)"})
+
+            required_cols = ["Ticker", "Company", "2024 Revenue (B USD)", "2025 Revenue (B USD)", "Growth 2025 vs 2024 (%)"]
+            missing = [c for c in required_cols if c not in df_growth.columns]
+            if missing:
+                st.warning(f"Missing columns for display: {missing}. Available columns: {', '.join(df_growth.columns)}")
+            else:
+                top_revenue_growth = df_growth.nlargest(10, "Growth 2025 vs 2024 (%)")[required_cols].reset_index(drop=True)
+                st.dataframe(
+                    top_revenue_growth.style.format({
+                        "2024 Revenue (B USD)": "{:,.2f}",
+                        "2025 Revenue (B USD)": "{:,.2f}",
+                        "Growth 2025 vs 2024 (%)": "{:+.2f}%"
+                    }),
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+if st.session_state.page == "analysis":
+    st.title("📊 Stock Analysis App")
+    st.subheader(f"Machine Learning Predictions of {ticker}")
+    st.write("""
+    This app uses a **Decision Tree Classifier** to predict whether tomorrow's stock price trend will be **up (Buy 📈)** or **down (Sell 📉)** compared to today.
+
+    Here's a simple, step-by-step explanation of how the prediction is made:
+
+    1. **Define the Target (What We Want to Predict)**  
+    We create a label called `label` that tells us the future trend:
+    - If the 5-day Simple Moving Average (SMA5) is **above** the 20-day SMA (SMA20) → this is a classic **golden cross**, a bullish signal → label = **1 (Up/Buy)**
+    - If SMA5 is **below** SMA20 → bearish signal → label = **-1 (Down/Sell)**
+    - We then **shift this label forward by 1 day** so that today's data predicts **tomorrow's** trend.
+
+    2. **Select Features (Input Signals)**  
+    - The model looks various significant features among the technical indicators and others 🤫 (Don't worry, feature engineering was done in the background)
+             
+    3. **Train the Model**  
+    - We split the historical data into training (70%) and testing (30%) sets.
+    - A **Decision Tree Classifier** (with max depth = 3) is trained on the training data.
+    - Why Decision Tree? After testing multiple models, it showed the **best balance of accuracy** and **lowest overfitting** (similar performance on both training and unseen test data).
+
+    4. **Make Tomorrow's Prediction**  
+    - We feed today's latest indicator values into the trained model.
+    - The model outputs **1** → predicts upward trend tomorrow → **Buy 📈**
+    - Or **-1** → predicts downward trend → **Sell 📉**
+
+    **Note**: This is a directional trend prediction (up or down), not an exact price forecast. No model can guarantee future results — always combine with your own research and risk management.
+
+    Happy investing! 🚀
+    """)
+    st.divider()
+
     data = yf.download(ticker, start=START, end=END) 
 
-    data.columns = data.columns.droplevel('Ticker')
+    data.columns = data.columns.droplevel(1)
     data['Daily_Return'] = data['Close'].pct_change()
 
-    data["SMA20"] = talib.SMA(data["Close"], timeperiod=20)
-    data["EMA60"] = talib.EMA(data["Close"], timeperiod=60)
-    data["RSI14"] = talib.RSI(data["Close"], timeperiod=14)
-    macd, macd_signal, macd_hist = talib.MACD(data["Close"], fastperiod=12, slowperiod=26, signalperiod=9)
-    data["MACD"], data["MACD_SIGNAL"], data["MACD_HIST"] = macd, macd_signal, macd_hist
-    upper, middle, lower = talib.BBANDS(data["Close"], timeperiod=20)
-    data["BB_upper"], data["BB_middle"], data["BB_lower"] = upper, middle, lower
-    data["ATR"] = talib.ATR(data["High"], data["Low"], data["Close"], timeperiod=14)
+    data['SMA5'] = talib.SMA(data['Close'], timeperiod=5)
+    data['SMA20'] = talib.SMA(data['Close'], timeperiod=20)
+
+    data['EMA60'] = talib.EMA(data['Close'], timeperiod=60)
+    data['RSI'] = talib.RSI(data['Close'], timeperiod=14)
+    data["MACD"], data["MACD_SIGNAL"], data["MACD_HIST"] = talib.MACD(data["Close"])
+    data['BB_Low'], data['BB_Mid'], data['BB_High'] = talib.BBANDS(data["Close"], timeperiod=20)
+    data["ATR"] = talib.ATR(data['High'], data['Close'], data['Low'], timeperiod=14)
+    data["ADX"] = talib.ADX(data["High"], data["Low"], data["Close"], timeperiod=14)
+    data["OBV"] = talib.OBV(data["Close"], data["Volume"])
+
+    # Momentum Indicators
+    data['STOCH_K'], data['STOCH_D'] = talib.STOCH(
+        data['High'], data['Low'], data['Close'],
+        fastk_period=14,
+        slowk_period=3, slowk_matype=0,
+        slowd_period=3, slowd_matype=0
+    )
+
+    data['CCI_14'] = talib.CCI(data['High'], data['Low'], data['Close'], timeperiod=14)
+    data['CCI_20'] = talib.CCI(data['High'], data['Low'], data['Close'], timeperiod=20)
+
+    data['WILLR_14'] = talib.WILLR(data['High'], data['Low'], data['Close'], timeperiod=14)
+
+    data['MOM_10'] = talib.MOM(data['Close'], timeperiod=10)
+    data['MOM_14'] = talib.MOM(data['Close'], timeperiod=14)
+
+    data['ROC_12'] = talib.ROC(data['Close'], timeperiod=12)
+
+    # Trend Strength Indicators
+    data['ADX_14'] = talib.ADX(data['High'], data['Low'], data['Close'], timeperiod=14)
+    data['PLUS_DI'] = talib.PLUS_DI(data['High'], data['Low'], data['Close'], timeperiod=14)
+    data['MINUS_DI'] = talib.MINUS_DI(data['High'], data['Low'], data['Close'], timeperiod=14)
+
+    data['AROONOSC_14'] = talib.AROONOSC(data['High'], data['Low'], timeperiod=14)
+
+    # Volume Indicators
+    data['OBV'] = talib.OBV(data['Close'], data['Volume'])
+    data['MFI_14'] = talib.MFI(data['High'], data['Low'], data['Close'], data['Volume'], timeperiod=14)
+
+    data['AD'] = talib.AD(data['High'], data['Low'], data['Close'], data['Volume'])
+
+    data['ADOSC'] = talib.ADOSC(data['High'], data['Low'], data['Close'], data['Volume'], 
+                                fastperiod=3, slowperiod=10)
+
+    # Other
+    data['SAR'] = talib.SAR(data['High'], data['Low'], acceleration=0.02, maximum=0.2)
+    data['NATR_14'] = talib.NATR(data['High'], data['Low'], data['Close'], timeperiod=14)
+
+
+    data['Daily_Return'] = data['Close'].pct_change()
+    data['nxt_ret'] = data['Daily_Return'].shift(periods=-1)
+    data['prev_close'] = data['Close'].shift(periods=1)
+    data['prev_open'] = data['Open'].shift(periods=1)
 
     # Ensure SMA60 exists for cross strategy (use rolling fallback if not computed)
     if "SMA60" not in data:
@@ -275,12 +403,47 @@ if load_btn:
         data["BB_upper"] = sma20 + 2 * std20
         data["BB_lower"] = sma20 - 2 * std20
 
+        # Making the label (depedent y-variable) to be golden cross (continuously going up as SMA5 is greater than SMA20)
+    data.loc[data['SMA5'] > data['SMA20'], 'label'] = 1
+    data.loc[data['SMA5'] < data['SMA20'], 'label'] = -1
+    data['label'] = data['label'].shift(periods=-1) 
+
+    tmr_data = data.tail(1)
+    data = data.dropna()
+
+    x_col = ['prev_close', 'prev_open', 'SMA5', 'SMA20', 'EMA60', 'RSI', 'MACD', 'MACD_SIGNAL', "MACD_HIST", "BB_Low", "BB_Mid", "BB_High", "ATR", "ADX", "OBV", 'STOCH_K', 'STOCH_D', 'CCI_14', 'CCI_20',
+       'WILLR_14', 'MOM_10', 'MOM_14', 'ROC_12', 'ADX_14', 'PLUS_DI',
+       'MINUS_DI', 'AROONOSC_14', 'MFI_14', 'AD', 'ADOSC', 'SAR', 'NATR_14', "Daily_Return"]
+    y_col = ['label']
+
+    X = data[x_col]
+    y = data[y_col]
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+    #Decision Tree
+    clf = tree.DecisionTreeClassifier(max_depth=3)
+    clf = clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_test)
+    tmr_pred = clf.predict(tmr_data[x_col])
+    status = "Buy 📈" if tmr_pred == 1 else "Sell 📉"
+    st.subheader(f"Decision Tree prediction: {status}")
+
+    with st.expander("Click to see the details"):
+        y_pred_train = clf.predict(X_train)
+        st.write(f"Decision Tree Accuracy: {accuracy_score(y_test, y_pred)}")
+        st.write(f"Decision Tree Train Set Accuracy: {accuracy_score(y_train, y_pred_train)}")
+        cm = confusion_matrix(y_test, y_pred, labels=clf.classes_)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=clf.classes_)
+        disp.plot()
+        plt.show()
+
     # Show data summary
     st.subheader(f"{ticker} — Latest data")
-    st.dataframe(data.tail(10))
+    st.dataframe(data[['Close', 'MACD', 'MACD_SIGNAL', 'MACD_HIST', 'SMA20', 'EMA60', 'RSI', 'BB_Low', 'BB_Mid', 'BB_High', 'ATR', 'ADX', 'OBV']].tail(10))
 
     # Plots
-    st.subheader("Price and Indicators")
+    st.subheader("Price and Technical Indicators")
     fig, ax = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
     ax[0].plot(data['Close'], label='Close')
     if "SMA20" in data:
@@ -289,7 +452,7 @@ if load_btn:
         ax[0].plot(data['EMA60'], label='EMA60')
     ax[0].set_ylabel("Price")
     ax[0].legend(loc='best')
-
+    ax[0].set_title(f"{ticker} Moving Averages")
     ax[1].plot(data['Daily_Return'], label='Daily_Return', color='tab:orange')
     ax[1].set_ylabel("Daily_Return")
     ax[1].legend(loc='best')
@@ -378,10 +541,10 @@ if load_btn:
     # Bollinger Bands plot (overlay on price)
     fig_bb, ax_bb = plt.subplots(figsize=(10, 4))
     ax_bb.plot(data.index, data["Close"], label="Close", color="black")
-    ax_bb.plot(data.index, data["BB_middle"], label="BB Middle (SMA20)", color="blue", linewidth=0.9)
-    ax_bb.plot(data.index, data["BB_upper"], label="BB Upper", color="red", linestyle="--", linewidth=0.8)
-    ax_bb.plot(data.index, data["BB_lower"], label="BB Lower", color="green", linestyle="--", linewidth=0.8)
-    ax_bb.fill_between(data.index, data["BB_lower"], data["BB_upper"], color="gray", alpha=0.1)
+    ax_bb.plot(data.index, data["BB_Mid"], label="BB Middle (SMA20)", color="blue", linewidth=0.9)
+    ax_bb.plot(data.index, data["BB_High"], label="BB Upper", color="red", linestyle="--", linewidth=0.8)
+    ax_bb.plot(data.index, data["BB_Low"], label="BB Lower", color="green", linestyle="--", linewidth=0.8)
+    ax_bb.fill_between(data.index, data["BB_Low"], data["BB_High"], color="gray", alpha=0.1)
     ax_bb.set_title(f"{ticker} Bollinger Bands (20)")
     ax_bb.set_xlabel("Date")
     ax_bb.set_ylabel("Price")
@@ -478,102 +641,10 @@ if load_btn:
     st.dataframe(forecast_df.set_index("Date"), use_container_width=True, hide_index=False)
 
     #ML to predict next day's return (+ or -)
-    data['Return'] = data['Daily_Return'].shift(-1)
-    threshold = 0.5
-    data.loc[data['Return']>=0.05, 'label'] = 1
-    data.loc[data['Return']<0.05, 'label'] = -1
-    data['label'].fillna(0, inplace=True)
-    data["ADX"] = talib.ADX(data['High'], data['Low'], data["Close"], timeperiod=14)
-    data["OBV"] = talib.OBV(data["Close"], data['Volume'])
+    # data['Return'] = data['Daily_Return'].shift(-1)
 
-    x_col = ['MACD', 'MACD_SIGNAL', 'MACD_HIST', 'SMA20', 'EMA60', 'RSI14', 'BB_lower', 'BB_middle', 'BB_upper', 'ATR', 'ADX', 'OBV']
-    y_col = ['label']
-
-    X = data[x_col]
-    y = data[y_col]
-
-    X_train = X[:-1]
-    X_test = X[-1:]
-    y_train = y[:-1]
-    y_test = y[-1:]
-
-    st.subheader(f"Machine Learning Predictions of {ticker}")
-
-    #Decision Tree
-    clf = tree.DecisionTreeClassifier()
-    clf = clf.fit(X_train, y_train)
-    y_pred = clf.predict(X_test)
-    status = "Buy 📈" if y_pred == 1 else "Sell 📉"
-    st.write(f"Decision Tree prediction: {status}")
-
-    # #KNN 
-    # knn = KNeighborsClassifier()
-    # knn.fit(X_train, y_train)
-    # y_pred = knn.predict(X_test)
-    # status = "Buy 📈" if y_pred == 1 else "Sell 📉"
-    # print(f"KNN prediction: {status}")
-
-    # #SVM
-    # svm = SVC()
-    # svm.fit(X_train, y_train)
-    # y_pred = svm.predict(X_test)
-    # status = "Buy 📈" if y_pred == 1 else "Sell 📉"
-    # print(f"SVM prediction: {status}")
-
-
-# Show the three top-10 tables only when the user has NOT clicked Load data
-if not load_btn:
-    st.subheader("Top 10 by Highest Trailing P/E Ratio")
-    top_pe = df.nlargest(10, "P/E Ratio")[["Ticker", "Company", "P/E Ratio"]].reset_index(drop=True)
-    st.dataframe(
-        top_pe.style.format({"P/E Ratio": "{:,.5f}"}),
-        use_container_width=True,
-        hide_index=True,
-    )
-
-    st.subheader("Top 10 by Largest Market Cap")
-    top_cap = df.nlargest(10, "Market Cap (B)")[["Ticker", "Company", "Market Cap (B)"]].reset_index(drop=True)
-    st.dataframe(
-        top_cap.style.format({"Market Cap (B)": "{:,.2f}"}),
-        use_container_width=True,
-        hide_index=True,
-    )
-
-    st.subheader("Top 10 by Revenue Growth: 2025 vs 2024")
-    result_df = get_top_growth_companies(tickers)
-
-    # Robust handling: empty results, column name detection, numeric coercion
-    if result_df is None or result_df.empty:
-        st.info("No companies with both 2024 and 2025 reported revenues were found.")
-    else:
-        df_growth = result_df.copy()
-
-        # find a candidate growth column (case-insensitive)
-        growth_candidates = [c for c in df_growth.columns if "growth" in c.lower()]
-        if not growth_candidates:
-            st.warning(f"No growth column found. Available columns: {', '.join(df_growth.columns)}")
-        else:
-            growth_col = growth_candidates[0]
-            # coerce to numeric (drop non-numeric)
-            df_growth[growth_col] = pd.to_numeric(df_growth[growth_col], errors="coerce")
-            df_growth = df_growth.dropna(subset=[growth_col])
-
-            # normalize column name used downstream
-            if growth_col != "Growth 2025 vs 2024 (%)":
-                df_growth = df_growth.rename(columns={growth_col: "Growth 2025 vs 2024 (%)"})
-
-            required_cols = ["Ticker", "Company", "2024 Revenue (B USD)", "2025 Revenue (B USD)", "Growth 2025 vs 2024 (%)"]
-            missing = [c for c in required_cols if c not in df_growth.columns]
-            if missing:
-                st.warning(f"Missing columns for display: {missing}. Available columns: {', '.join(df_growth.columns)}")
-            else:
-                top_revenue_growth = df_growth.nlargest(10, "Growth 2025 vs 2024 (%)")[required_cols].reset_index(drop=True)
-                st.dataframe(
-                    top_revenue_growth.style.format({
-                        "2024 Revenue (B USD)": "{:,.2f}",
-                        "2025 Revenue (B USD)": "{:,.2f}",
-                        "Growth 2025 vs 2024 (%)": "{:+.2f}%"
-                    }),
-                    use_container_width=True,
-                    hide_index=True
-                )
+    # Making 'label' to be the daily return % being above the threshold 
+    # threshold = 0.05
+    # data.loc[data['Return']>=threshold, 'label'] = 1
+    # data.loc[data['Return']<threshold, 'label'] = -1
+    # data['label'].fillna(0, inplace=True)
