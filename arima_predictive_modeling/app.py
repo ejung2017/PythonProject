@@ -31,9 +31,9 @@ st.set_page_config(
 )
 
 # --- allow navigation via URL query param and show top-right Home link ---
-params = st.query_params()
-if "page" in params:
-    st.session_state.page = params["page"][0]
+# params = st.query_params
+# if "page" in params:
+#     st.session_state.page = params["page"][0]
 
 st.markdown(
     "<div style='position:fixed; top:8px; right:16px; z-index:9999;'>"
@@ -54,7 +54,7 @@ col1, col2 = st.sidebar.columns(2)
 with col1:
     if st.button("Load Data", use_container_width=True):
         st.session_state.page = "analysis"
-        st.query_params(page="analysis")
+        # st.query_params(page="analysis")
         st.rerun()
 # with col2:
 #     # left intentionally blank to keep layout balanced (Back button removed)
@@ -195,8 +195,9 @@ def get_top_growth_companies(tickers: list) -> pd.DataFrame:
 # --- Navigation state (landing / analysis) ---
 if "page" not in st.session_state:
     st.session_state.page = "landing"
-    github_url = "https://github.com/ejung2017/PythonProject/tree/main"
 
+if st.session_state.page == "landing":
+    github_url = "https://github.com/ejung2017/PythonProject/tree/main"
     st.title("📊 Stock Analysis App")
     st.write("Enter a ticker in the sidebar and click Load data and ARIMA Time Series Analysis. \n\nFor more information, please visit [link](%s)." % github_url)
     st.write("Please note that Yahoo Finance may have some issues that the Latest Data and Price & Technical Indicators will be shown empty. If so, please refresh the page and try again.")
@@ -280,7 +281,7 @@ if "page" not in st.session_state:
                     hide_index=True
                 )
 
-if st.session_state.page == "analysis":
+elif st.session_state.page == "analysis":
     st.title("📊 Stock Analysis App")
     st.subheader(f"Machine Learning Predictions of {ticker}")
     st.write("""
