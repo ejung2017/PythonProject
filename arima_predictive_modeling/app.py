@@ -35,11 +35,47 @@ st.set_page_config(
 # if "page" in params:
 #     st.session_state.page = params["page"][0]
 
-st.markdown(
-    "<div style='position:fixed; top:8px; right:16px; z-index:9999;'>"
-    "<a href='?page=landing' style='background:#f0f2f6; padding:6px 10px; border-radius:6px; text-decoration:none; color:#111;'>🏠 Home</a>"
-    "</div>",
-    unsafe_allow_html=True,
+st.markdown("""
+    <style>
+    /* Sticky top bar with blur effect */
+    .custom-topbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 56px;                    /* Match Streamlit's default header height */
+        background: rgba(255, 255, 255, 0.8); /* Semi-transparent white */
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: flex-end;       /* Push content to the right */
+        align-items: center;
+        padding: 0 20px;
+        z-index: 9999;
+    }
+    .custom-topbar a {
+        background: #f0f2f6;
+        color: #111;
+        padding: 8px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+        margin-left: 12px;               /* Space from Deploy button */
+    }
+    .custom-topbar a:hover {
+        background: #e0e2e6;
+    }
+    /* Optional: Push main content down so it's not hidden under the bar */
+    .main .block-container {
+        padding-top: 70px !important;
+    }
+    </style>
+
+    <div class="custom-topbar">
+        <a href="?page=landing">🏠 Home</a>
+    </div>
+    """, unsafe_allow_html=True
 )
 
 # Sidebar inputs
@@ -283,12 +319,13 @@ if st.session_state.page == "landing":
 
 elif st.session_state.page == "analysis":
     st.title("📊 Stock Analysis App")
-    st.subheader(f"Machine Learning Predictions of {ticker}")
+    st.header(f"Machine Learning Predictions of {ticker}")
     st.write("""
-    This app uses a **Decision Tree Classifier** to predict whether tomorrow's stock price trend will be **up (Buy 📈)** or **down (Sell 📉)** compared to today.
+    This app uses various Machine Learning Models to predict whether tomorrow's stock price trend will be **up (Buy 📈)** or **down (Sell 📉)**.
+    """)
 
-    Here's a simple, step-by-step explanation of how the prediction is made:
-
+    with st.expander("Here's a simple, step-by-step explanation of how the prediction is made"):
+        st.write("""
     1. **Define the Target (What We Want to Predict)**  
     We create a label called `label` that tells us the future trend:
     - If the 5-day Simple Moving Average (SMA5) is **above** the 20-day SMA (SMA20) → this is a classic **golden cross**, a bullish signal → label = **1 (Up/Buy)**
@@ -312,6 +349,7 @@ elif st.session_state.page == "analysis":
 
     Happy investing! 🚀
     """)
+        
     st.divider()
 
     data = yf.download(ticker, start=START, end=END) 
@@ -422,22 +460,74 @@ elif st.session_state.page == "analysis":
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
+    # ML Models
+    result_dict = {}
     #Decision Tree
-    clf = tree.DecisionTreeClassifier(max_depth=3)
+    result_dict['Decision Tree'] = {}
+    clf = DecisionTreeClassifier(max_depth=3)
     clf = clf.fit(X_train, y_train)
-    y_pred = clf.predict(X_test)
-    tmr_pred = clf.predict(tmr_data[x_col])
-    status = "Buy 📈" if tmr_pred == 1 else "Sell 📉"
-    st.subheader(f"Decision Tree prediction: {status}")
+    result_dict['Decision Tree']['test'] = clf.predict(X_test)
+    result_dict['Decision Tree']['train'] = clf.predict(X_train)
+    result_dict['Decision Tree']['tr'] = clf.predict(tmr_data[x_col])
+    result_dict['Decision Tree']['status'] = "Buy 📈" if result_dict['Decision Tree']['tr'] == 1 else "Sell 📉"
+    # st.write(f"Decision Tree Prediction: {status}")
+
+    #KNN
+    result_dict['KNN'] = {}
+    knn = KNeighborsClassifier(n_neighbors=10)
+    knn.fit(X_train, y_train)
+    result_dict['KNN']['test'] = knn.predict(X_test)
+    result_dict['KNN']['train'] = knn.predict(X_train)
+    result_dict['KNN']['tr'] = knn.predict(tmr_data[x_col])
+    result_dict['KNN']['status'] = "Buy 📈" if result_dict['KNN']['tr'] == 1 else "Sell 📉"
+    # st.write(f"KNN Prediction: {status}")
+
+    #Logistic Regression
+    result_dict['Logistic Regression'] = {}
+    log_reg = LogisticRegression()
+    log_reg.fit(X_train, y_train)
+    result_dict['Logistic Regression']['test'] = log_reg.predict(X_test)
+    result_dict['Logistic Regression']['train'] = log_reg.predict(X_train)
+    result_dict['Logistic Regression']['tr'] = log_reg.predict(tmr_data[x_col])
+    result_dict['Logistic Regression']['status'] = "Buy 📈" if result_dict['Logistic Regression']['tr'] == 1 else "Sell 📉"
+    # st.write(f"Logistic Regression Prediction: {status}")
+
+    #Random Forest
+    result_dict['Random Forest'] = {}
+    random = RandomForestClassifier(n_estimators=30,max_depth=5)
+    random.fit(X_train, y_train)
+    result_dict['Random Forest']['test'] = random.predict(X_test)
+    result_dict['Random Forest']['train'] = random.predict(X_train)
+    result_dict['Random Forest']['tr'] = random.predict(tmr_data[x_col])
+    result_dict['Random Forest']['status'] = "Buy 📈" if result_dict['Random Forest']['tr'] == 1 else "Sell 📉"
+    # st.write(f"Random Forest Prediction: {status}")
+
+    #SVM
+    result_dict['SVM'] = {}
+    svm = SVC()
+    svm.fit(X_train, y_train)
+    result_dict['SVM']['test'] = svm.predict(X_test)
+    result_dict['SVM']['train'] = svm.predict(X_train)
+    result_dict['SVM']['tr'] = svm.predict(tmr_data[x_col])
+    result_dict['SVM']['status'] = "Buy 📈" if result_dict['SVM']['tr'] == 1 else "Sell 📉"
+    # st.write(f"SVM Prediction: {status}")
+
+
+    for m in result_dict.keys():
+        test_acc = accuracy_score(result_dict[m]['test'], y_test)
+        train_acc = accuracy_score(result_dict[m]['train'], y_train)
+        if train_acc - test_acc < 0.05 and test_acc > 0.8 and train_acc > 0.8: 
+            st.subheader(f"**{m} Prediction**: {result_dict[m]['status']}")
+
 
     with st.expander("Click to see the details"):
-        y_pred_train = clf.predict(X_train)
-        st.write(f"Decision Tree Accuracy: {accuracy_score(y_test, y_pred)}")
-        st.write(f"Decision Tree Train Set Accuracy: {accuracy_score(y_train, y_pred_train)}")
-        cm = confusion_matrix(y_test, y_pred, labels=clf.classes_)
-        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=clf.classes_)
-        disp.plot()
-        plt.show()
+        for m in result_dict.keys():
+            test_acc = accuracy_score(result_dict[m]['test'], y_test)
+            train_acc = accuracy_score(result_dict[m]['train'], y_train)
+            st.write(f"{m} Accuracy: {test_acc}")
+            st.write(f"{m} Train Set Accuracy: {train_acc}")
+        
+    st.divider()
 
     # Show data summary
     st.subheader(f"{ticker} — Latest data")
