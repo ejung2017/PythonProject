@@ -24,7 +24,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn import tree
 
 st.set_page_config(
-    page_title="📊 ARIMA Time Series Stock Analysis App",
+    page_title="📊 Time Series Stock Analysis App",
     page_icon="📈",
     layout="centered",
     initial_sidebar_state="expanded",
@@ -351,6 +351,7 @@ elif st.session_state.page == "analysis":
     """)
         
     st.divider()
+    st.subheader("Model Recommendations")
 
     data = yf.download(ticker, start=START, end=END) 
 
@@ -510,22 +511,41 @@ elif st.session_state.page == "analysis":
     result_dict['SVM']['train'] = svm.predict(X_train)
     result_dict['SVM']['tr'] = svm.predict(tmr_data[x_col])
     result_dict['SVM']['status'] = "Buy 📈" if result_dict['SVM']['tr'] == 1 else "Sell 📉"
-    # st.write(f"SVM Prediction: {status}")
 
-
+    # Collect qualifying models and sort by test accuracy descending
+    qualifying_models = []
     for m in result_dict.keys():
         test_acc = accuracy_score(result_dict[m]['test'], y_test)
         train_acc = accuracy_score(result_dict[m]['train'], y_train)
-        if train_acc - test_acc < 0.05 and test_acc > 0.8 and train_acc > 0.8: 
-            st.subheader(f"**{m} Prediction**: {result_dict[m]['status']}")
+        if train_acc - test_acc < 0.05 and test_acc > 0.8 and train_acc > 0.8:
+            qualifying_models.append((m, test_acc))
 
+    # Sort by test_acc descending
+    qualifying_models.sort(key=lambda x: x[1], reverse=True)
+
+    # Display predictions in sorted order
+    for m, _ in qualifying_models:
+        st.markdown(f"**{m} Prediction**: {result_dict[m]['status']}")
 
     with st.expander("Click to see the details"):
+        st.markdown("📝 Models sorted by test accuracy (highest to lowest)")
+        all_models = []
         for m in result_dict.keys():
             test_acc = accuracy_score(result_dict[m]['test'], y_test)
             train_acc = accuracy_score(result_dict[m]['train'], y_train)
-            st.write(f"{m} Accuracy: {test_acc}")
-            st.write(f"{m} Train Set Accuracy: {train_acc}")
+            all_models.append((m, test_acc, train_acc))
+
+        # Sort by test_acc descending
+        all_models.sort(key=lambda x: x[1], reverse=True)
+
+        qualifying_names = [q[0] for q in qualifying_models]
+        for m, test_acc, train_acc in all_models:
+            if m in qualifying_names:
+                st.markdown(f"**{m} Accuracy:** {test_acc}")
+                st.markdown(f"**{m} Train Set Accuracy:** {train_acc}")
+            else:
+                st.write(f"{m} Accuracy: {test_acc}")
+                st.write(f"{m} Train Set Accuracy: {train_acc}")
         
     st.divider()
 
