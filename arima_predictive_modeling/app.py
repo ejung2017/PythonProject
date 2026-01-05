@@ -30,10 +30,9 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# --- allow navigation via URL query param and show top-right Home link ---
-# params = st.query_params
-# if "page" in params:
-#     st.session_state.page = params["page"][0]
+# --- Navigation state (landing / analysis) ---
+if "page" not in st.session_state:
+    st.session_state.page = "landing"
 
 st.markdown("""
     <style>
@@ -92,9 +91,11 @@ with col1:
         st.session_state.page = "analysis"
         # st.query_params(page="analysis")
         st.rerun()
-# with col2:
-#     # left intentionally blank to keep layout balanced (Back button removed)
-#     st.write("")
+with col2:
+    if st.session_state.page == "analysis":
+        if st.button("Back", use_container_width=True):
+            st.session_state.page = "landing"
+            st.rerun()
 
 # Step 1: Fetch S&P 500 ticker list from Wikipedia (reliable source)
 @st.cache_data # indefinitely 
@@ -443,7 +444,7 @@ elif st.session_state.page == "analysis":
         data["BB_upper"] = sma20 + 2 * std20
         data["BB_lower"] = sma20 - 2 * std20
 
-        # Making the label (depedent y-variable) to be golden cross (continuously going up as SMA5 is greater than SMA20)
+    # Making the label (depedent y-variable) to be golden cross (continuously going up as SMA5 is greater than SMA20)
     data.loc[data['SMA5'] > data['SMA20'], 'label'] = 1
     data.loc[data['SMA5'] < data['SMA20'], 'label'] = -1
     data['label'] = data['label'].shift(periods=-1) 
@@ -750,12 +751,3 @@ elif st.session_state.page == "analysis":
     forecast_df["Forecast Price"] = forecast_df["Forecast Price"].round(2)
     st.subheader("5-day ARIMA Forecast")
     st.dataframe(forecast_df.set_index("Date"), use_container_width=True, hide_index=False)
-
-    #ML to predict next day's return (+ or -)
-    # data['Return'] = data['Daily_Return'].shift(-1)
-
-    # Making 'label' to be the daily return % being above the threshold 
-    # threshold = 0.05
-    # data.loc[data['Return']>=threshold, 'label'] = 1
-    # data.loc[data['Return']<threshold, 'label'] = -1
-    # data['label'].fillna(0, inplace=True)
