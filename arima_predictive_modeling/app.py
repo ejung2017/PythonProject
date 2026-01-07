@@ -1,3 +1,10 @@
+## add 
+# 2020-01-01 - 2026-01-01
+# model prediction history 
+# lastest 1month prediction: 30days 
+# date: 2020-01-01 - 2025-11-30 -> train/test 
+# prediction: 2025-12-01 - 2025-12-31 -> performance 
+
 import streamlit as st
 from datetime import date
 import yfinance as yf
@@ -322,7 +329,7 @@ elif st.session_state.page == "analysis":
     st.title("📊 Stock Analysis App")
     st.header(f"Machine Learning Predictions of {ticker}")
     st.write("""
-    This app uses various Machine Learning Models to predict whether tomorrow's stock price trend will be **up (Buy 📈)** or **down (Sell 📉)**.
+    This app uses various Machine Learning Models to predict whether **tomorrow**'s stock price trend will be **up (Buy 📈)** or **down (Sell 📉)**.
     """)
 
     with st.expander("Here's a simple, step-by-step explanation of how the prediction is made"):
@@ -525,7 +532,7 @@ elif st.session_state.page == "analysis":
     qualifying_models.sort(key=lambda x: x[1], reverse=True)
 
     # Display predictions in sorted order
-    for m, _ in qualifying_models:
+    for m , test_acc in qualifying_models:
         st.markdown(f"**{m} Prediction**: {result_dict[m]['status']}")
 
     with st.expander("Click to see the details"):
@@ -542,11 +549,11 @@ elif st.session_state.page == "analysis":
         qualifying_names = [q[0] for q in qualifying_models]
         for m, test_acc, train_acc in all_models:
             if m in qualifying_names:
-                st.markdown(f"**{m} Accuracy:** {test_acc}")
-                st.markdown(f"**{m} Train Set Accuracy:** {train_acc}")
+                st.markdown(f"**{m} Accuracy:** {test_acc*100:.2f}%")
+                st.markdown(f"**{m} Train Set Accuracy:** {train_acc*100:.2f}%")
             else:
-                st.write(f"{m} Accuracy: {test_acc}")
-                st.write(f"{m} Train Set Accuracy: {train_acc}")
+                st.write(f"{m} Accuracy: {test_acc*100:.2f}%")
+                st.write(f"{m} Train Set Accuracy: {train_acc*100:.2f}%")
         
     st.divider()
 
