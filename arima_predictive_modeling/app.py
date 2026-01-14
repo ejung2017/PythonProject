@@ -17,10 +17,10 @@ import pmdarima as pm
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from io import StringIO  
 from typing import Optional, Tuple
+from dateutil.relativedelta import relativedelta
 
 import seaborn as sns
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, ConfusionMatrixDisplay
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
@@ -29,6 +29,8 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn import tree
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, ConfusionMatrixDisplay
+
 
 st.set_page_config(
     page_title="📊 Time Series Stock Analysis App",
@@ -87,7 +89,7 @@ st.markdown("""
 # Sidebar inputs
 st.sidebar.header("Stock Selection")
 ticker = st.sidebar.text_input("Ticker (e.g. AAPL):", value="")
-START_default = pd.to_datetime("2020-01-01").date()
+START_default = pd.to_datetime("2010-01-01").date()
 START = st.sidebar.date_input("Start date", value=START_default)
 END = st.sidebar.date_input("End date", value=date.today())
 
@@ -116,7 +118,7 @@ def get_sp500_tickers() -> list[str]:
     ]
 
     tickers = [t.replace('.', '-') for t in top_50_sp_500_tickers]
-    print(f"Using hardcoded list: {len(tickers)} tickers.")
+    st.markdown(f"Using hardcoded list: {len(tickers)} tickers.")
     return tickers
 
 # Step 2: Function to get P/E, Market Cap, Revenue Growth for a ticker
@@ -195,7 +197,7 @@ def get_revenue_growth_2025_vs_2024(ticker: str) -> Tuple[Optional[pd.DataFrame]
         return df, growth_rounded
 
     except Exception as e:
-        print(f"Error fetching revenue for {ticker}: {e}")
+        st.markdown(f"Error fetching revenue for {ticker}: {e}")
         return None, None
     
 @st.cache_data
@@ -453,7 +455,7 @@ elif st.session_state.page == "analysis":
 
     # Making the label (depedent y-variable) to be golden cross (continuously going up as SMA5 is greater than SMA20)
     data.loc[data['SMA5'] > data['SMA20'], 'label'] = 1
-    data.loc[data['SMA5'] < data['SMA20'], 'label'] = -1
+    data.loc[data['SMA5'] <= data['SMA20'], 'label'] = -1
     data['label'] = data['label'].shift(periods=-1) 
 
     tmr_data = data.tail(1)
@@ -464,10 +466,19 @@ elif st.session_state.page == "analysis":
        'MINUS_DI', 'AROONOSC_14', 'MFI_14', 'AD', 'ADOSC', 'SAR', 'NATR_14', "Daily_Return"]
     y_col = ['label']
 
-    X = data[x_col]
-    y = data[y_col]
+    # 1 month (< 30 trading days) -- changed to 3 months ago (experiment)
+    three_month_ago = END + relativedelta(months=-3) 
+
+    pred_month = data.loc[three_month_ago:]
+
+    training = data.loc[:three_month_ago]
+
+    X = training[x_col]
+    y = training[y_col]
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    pred_data_x = pred_month[x_col]
+    pred_data_y = pred_month[y_col]
 
     # ML Models
     result_dict = {}
@@ -477,8 +488,9 @@ elif st.session_state.page == "analysis":
     clf = clf.fit(X_train, y_train)
     result_dict['Decision Tree']['test'] = clf.predict(X_test)
     result_dict['Decision Tree']['train'] = clf.predict(X_train)
-    result_dict['Decision Tree']['tr'] = clf.predict(tmr_data[x_col])
-    result_dict['Decision Tree']['status'] = "Buy 📈" if result_dict['Decision Tree']['tr'] == 1 else "Sell 📉"
+    result_dict['Decision Tree']['tmr'] = clf.predict(tmr_data[x_col])
+    result_dict['Decision Tree']['latest_month'] = clf.predict(pred_data_x)
+    result_dict['Decision Tree']['status'] = "Buy 📈" if result_dict['Decision Tree']['tmr'] == 1 else "Sell 📉"
     # st.write(f"Decision Tree Prediction: {status}")
 
     #KNN
@@ -487,8 +499,9 @@ elif st.session_state.page == "analysis":
     knn.fit(X_train, y_train)
     result_dict['KNN']['test'] = knn.predict(X_test)
     result_dict['KNN']['train'] = knn.predict(X_train)
-    result_dict['KNN']['tr'] = knn.predict(tmr_data[x_col])
-    result_dict['KNN']['status'] = "Buy 📈" if result_dict['KNN']['tr'] == 1 else "Sell 📉"
+    result_dict['KNN']['tmr'] = knn.predict(tmr_data[x_col])
+    result_dict['KNN']['latest_month'] = knn.predict(pred_data_x)
+    result_dict['KNN']['status'] = "Buy 📈" if result_dict['KNN']['tmr'] == 1 else "Sell 📉"
     # st.write(f"KNN Prediction: {status}")
 
     #Logistic Regression
@@ -497,8 +510,9 @@ elif st.session_state.page == "analysis":
     log_reg.fit(X_train, y_train)
     result_dict['Logistic Regression']['test'] = log_reg.predict(X_test)
     result_dict['Logistic Regression']['train'] = log_reg.predict(X_train)
-    result_dict['Logistic Regression']['tr'] = log_reg.predict(tmr_data[x_col])
-    result_dict['Logistic Regression']['status'] = "Buy 📈" if result_dict['Logistic Regression']['tr'] == 1 else "Sell 📉"
+    result_dict['Logistic Regression']['tmr'] = log_reg.predict(tmr_data[x_col])
+    result_dict['Logistic Regression']['latest_month'] = log_reg.predict(pred_data_x)  # Remove [x_col]
+    result_dict['Logistic Regression']['status'] = "Buy 📈" if result_dict['Logistic Regression']['tmr'][0] == 1 else "Sell 📉"
     # st.write(f"Logistic Regression Prediction: {status}")
 
     #Random Forest
@@ -507,8 +521,9 @@ elif st.session_state.page == "analysis":
     random.fit(X_train, y_train)
     result_dict['Random Forest']['test'] = random.predict(X_test)
     result_dict['Random Forest']['train'] = random.predict(X_train)
-    result_dict['Random Forest']['tr'] = random.predict(tmr_data[x_col])
-    result_dict['Random Forest']['status'] = "Buy 📈" if result_dict['Random Forest']['tr'] == 1 else "Sell 📉"
+    result_dict['Random Forest']['tmr'] = random.predict(tmr_data[x_col])
+    result_dict['Random Forest']['latest_month'] = random.predict(pred_data_x)
+    result_dict['Random Forest']['status'] = "Buy 📈" if result_dict['Random Forest']['tmr'] == 1 else "Sell 📉"
     # st.write(f"Random Forest Prediction: {status}")
 
     #SVM
@@ -517,8 +532,9 @@ elif st.session_state.page == "analysis":
     svm.fit(X_train, y_train)
     result_dict['SVM']['test'] = svm.predict(X_test)
     result_dict['SVM']['train'] = svm.predict(X_train)
-    result_dict['SVM']['tr'] = svm.predict(tmr_data[x_col])
-    result_dict['SVM']['status'] = "Buy 📈" if result_dict['SVM']['tr'] == 1 else "Sell 📉"
+    result_dict['SVM']['tmr'] = svm.predict(tmr_data[x_col])
+    result_dict['SVM']['latest_month'] = svm.predict(pred_data_x)
+    result_dict['SVM']['status'] = "Buy 📈" if result_dict['SVM']['tmr'] == 1 else "Sell 📉"
 
     # Collect qualifying models and sort by test accuracy descending
     qualifying_models = []
@@ -532,7 +548,7 @@ elif st.session_state.page == "analysis":
     qualifying_models.sort(key=lambda x: x[1], reverse=True)
 
     # Display predictions in sorted order
-    for m , test_acc in qualifying_models:
+    for m, test_acc in qualifying_models:
         st.markdown(f"**{m} Prediction**: {result_dict[m]['status']}")
 
     with st.expander("Click to see the details"):
@@ -555,6 +571,63 @@ elif st.session_state.page == "analysis":
                 st.write(f"{m} Accuracy: {test_acc*100:.2f}%")
                 st.write(f"{m} Train Set Accuracy: {train_acc*100:.2f}%")
         
+    st.divider()
+    st.subheader("Model Credibility")
+    ## add 
+    # 2020-01-01 - 2026-01-01
+    # model prediction history 
+    # lastest 1month prediction: 30days 
+    # date: 2020-01-01 - 2025-11-30 -> train/test 
+    # prediction: 2025-12-01 - 2025-12-31 -> performance 
+
+    # Evaluation
+    with st.expander("Click to see the details"):
+        for m in qualifying_names: 
+            # Accuracy
+            pred_acc = accuracy_score(pred_data_y, result_dict[m]['latest_month'])
+
+            # Calculate precision, recall, F1 for test set
+            precision_test = precision_score(y_test, result_dict[m]['test'], average='weighted')
+            recall_test = recall_score(y_test, result_dict[m]['test'], average='weighted')
+            f1_test = f1_score(y_test, result_dict[m]['test'], average='weighted')
+            
+            # For train set
+            precision_train = precision_score(y_train, result_dict[m]['train'], average='weighted')
+            recall_train = recall_score(y_train, result_dict[m]['train'], average='weighted')
+            f1_train = f1_score(y_train, result_dict[m]['train'], average='weighted')
+            
+            # For latest month prediction
+            precision_pred = precision_score(pred_data_y, result_dict[m]['latest_month'], average='weighted')
+            recall_pred = recall_score(pred_data_y, result_dict[m]['latest_month'], average='binary')
+            f1_pred = f1_score(pred_data_y, result_dict[m]['latest_month'], average='weighted')
+            
+            
+            st.markdown(f"**{m}**:")
+            st.markdown(f"""
+            - Accuracy: {pred_acc*100:.2f}%
+            - Precision: {precision_pred*100:.2f}%
+            - Recall: {recall_pred*100:.2f}%
+            - F1 Score: {f1_pred*100:.2f}%
+            """)
+            
+            # Confusion Matrix for latest month prediction
+            cm = confusion_matrix(pred_data_y, result_dict[m]['latest_month'])
+            # st.markdown(f"**Confusion Matrix**:")
+            
+            # Create a pandas DataFrame for better readability
+            cm_df = pd.DataFrame(
+                cm,
+                columns=[f'True {label}' for label in [-1, 1]],
+                index=[f'Pred {label}' for label in [-1, 1]]
+            )
+
+            fig, ax = plt.subplots(figsize=(4, 4))
+            ax.set_title(f"{m} Confusion Matrix")
+            ConfusionMatrixDisplay.from_predictions(result_dict[m]['latest_month'], pred_data_y, display_labels=[-1, 1], ax=ax)
+            st.pyplot(fig, width=450)
+            
+            st.markdown("\n")
+
     st.divider()
 
     # Show data summary
