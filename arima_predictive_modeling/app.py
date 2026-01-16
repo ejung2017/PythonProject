@@ -1,10 +1,3 @@
-## add 
-# 2020-01-01 - 2026-01-01
-# model prediction history 
-# lastest 1month prediction: 30days 
-# date: 2020-01-01 - 2025-11-30 -> train/test 
-# prediction: 2025-12-01 - 2025-12-31 -> performance 
-
 import streamlit as st
 from datetime import date
 import yfinance as yf
@@ -13,13 +6,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import talib
 from statsmodels.tsa.arima.model import ARIMA
-import pmdarima as pm
-from sklearn.metrics import mean_absolute_error, mean_squared_error
-from io import StringIO  
 from typing import Optional, Tuple
 from dateutil.relativedelta import relativedelta
 
-import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
@@ -27,13 +16,117 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import StandardScaler
-from sklearn import tree
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, ConfusionMatrixDisplay
 
+# ===== DATA PREPARATION FUNCTION =====
+def prepare_stock_data(ticker: str, start_date, end_date):
+    """Download and prepare stock data with technical indicators."""
+    try:
+        data = yf.download(ticker, start=start_date, end=end_date)
+        
+        # Handle both MultiIndex and single-level columns
+        if isinstance(data.columns, pd.MultiIndex):
+            data.columns = data.columns.droplevel(1)
+        
+        if data.empty:
+            return None, f"No data found for ticker {ticker}"
+        
+        data['Daily_Return'] = data['Close'].pct_change()
+
+        data['SMA5'] = talib.SMA(data['Close'], timeperiod=5)
+        data['SMA20'] = talib.SMA(data['Close'], timeperiod=20)
+
+        data['EMA60'] = talib.EMA(data['Close'], timeperiod=60)
+        data['RSI'] = talib.RSI(data['Close'], timeperiod=14)
+        data["MACD"], data["MACD_SIGNAL"], data["MACD_HIST"] = talib.MACD(data["Close"])
+        data['BB_Low'], data['BB_Mid'], data['BB_High'] = talib.BBANDS(data["Close"], timeperiod=20)
+        data["ATR"] = talib.ATR(data['High'], data['Close'], data['Low'], timeperiod=14)
+        data["ADX"] = talib.ADX(data["High"], data["Low"], data["Close"], timeperiod=14)
+        data["OBV"] = talib.OBV(data["Close"], data["Volume"])
+
+        # Momentum Indicators
+        data['STOCH_K'], data['STOCH_D'] = talib.STOCH(
+            data['High'], data['Low'], data['Close'],
+            fastk_period=14,
+            slowk_period=3, slowk_matype=0,
+            slowd_period=3, slowd_matype=0
+        )
+
+        data['CCI_14'] = talib.CCI(data['High'], data['Low'], data['Close'], timeperiod=14)
+        data['CCI_20'] = talib.CCI(data['High'], data['Low'], data['Close'], timeperiod=20)
+
+        data['WILLR_14'] = talib.WILLR(data['High'], data['Low'], data['Close'], timeperiod=14)
+
+        data['MOM_10'] = talib.MOM(data['Close'], timeperiod=10)
+        data['MOM_14'] = talib.MOM(data['Close'], timeperiod=14)
+
+        data['ROC_12'] = talib.ROC(data['Close'], timeperiod=12)
+
+        # Trend Strength Indicators
+        data['ADX_14'] = talib.ADX(data['High'], data['Low'], data['Close'], timeperiod=14)
+        data['PLUS_DI'] = talib.PLUS_DI(data['High'], data['Low'], data['Close'], timeperiod=14)
+        data['MINUS_DI'] = talib.MINUS_DI(data['High'], data['Low'], data['Close'], timeperiod=14)
+
+        data['AROONOSC_14'] = talib.AROONOSC(data['High'], data['Low'], timeperiod=14)
+
+        # Volume Indicators
+        data['OBV'] = talib.OBV(data['Close'], data['Volume'])
+        data['MFI_14'] = talib.MFI(data['High'], data['Low'], data['Close'], data['Volume'], timeperiod=14)
+
+        data['AD'] = talib.AD(data['High'], data['Low'], data['Close'], data['Volume'])
+
+        data['ADOSC'] = talib.ADOSC(data['High'], data['Low'], data['Close'], data['Volume'], 
+                                    fastperiod=3, slowperiod=10)
+
+        # Other
+        data['SAR'] = talib.SAR(data['High'], data['Low'], acceleration=0.02, maximum=0.2)
+        data['NATR_14'] = talib.NATR(data['High'], data['Low'], data['Close'], timeperiod=14)
+
+        data['nxt_ret'] = data['Daily_Return'].shift(periods=-1)
+        data['prev_close'] = data['Close'].shift(periods=1)
+        data['prev_open'] = data['Open'].shift(periods=1)
+
+        # Ensure SMA60 exists for cross strategy
+        if "SMA60" not in data:
+            data["SMA60"] = data["Close"].rolling(window=60, min_periods=1).mean()
+
+        # Fallbacks for RSI14, MACD, Bollinger
+        if "RSI14" not in data or data["RSI14"].isna().all():
+            delta = data["Close"].diff()
+            up = delta.clip(lower=0)
+            down = -delta.clip(upper=0)
+            roll_up = up.rolling(window=14, min_periods=14).mean()
+            roll_down = down.rolling(window=14, min_periods=14).mean()
+            rs = roll_up / roll_down
+            data["RSI14"] = 100 - (100 / (1 + rs))
+
+        if "MACD" not in data or "MACD_SIGNAL" not in data:
+            ema12 = data["Close"].ewm(span=12, adjust=False).mean()
+            ema26 = data["Close"].ewm(span=26, adjust=False).mean()
+            data["MACD"] = ema12 - ema26
+            data["MACD_SIGNAL"] = data["MACD"].ewm(span=9, adjust=False).mean()
+            data["MACD_HIST"] = data["MACD"] - data["MACD_SIGNAL"]
+
+        if not {"BB_middle", "BB_upper", "BB_lower"}.issubset(set(data.columns)):
+            sma20 = data["Close"].rolling(window=20, min_periods=20).mean()
+            std20 = data["Close"].rolling(window=20, min_periods=20).std()
+            data["BB_middle"] = sma20
+            data["BB_upper"] = sma20 + 2 * std20
+            data["BB_lower"] = sma20 - 2 * std20
+
+        # Create label
+        data['label'] = 0
+        data.loc[data['SMA5'] > data['SMA20'], 'label'] = 1
+        data.loc[data['SMA5'] <= data['SMA20'], 'label'] = -1
+        data['label'] = data['label'].shift(periods=-1)
+
+        return data, None
+    
+    except Exception as e:
+        return None, str(e)
 
 st.set_page_config(
-    page_title="📊 Time Series Stock Analysis App",
+    page_title="📊 Time Series Stock Prediction App",
     page_icon="📈",
     layout="centered",
     initial_sidebar_state="expanded",
@@ -106,230 +199,24 @@ with col2:
             st.session_state.page = "landing"
             st.rerun()
 
-# Step 1: Fetch S&P 500 ticker list from Wikipedia (reliable source)
-@st.cache_data # indefinitely 
-def get_sp500_tickers() -> list[str]:
-    top_50_sp_500_tickers = [
-    'NVDA', 'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'GOOG', 'AVGO', 'META', 'TSLA', 'BRK.B',
-    'LLY', 'WMT', 'JPM', 'V', 'ORCL', 'XOM', 'JNJ', 'MA', 'NFLX', 'ABBV',
-    'COST', 'BAC', 'PLTR', 'PG', 'HD', 'AMD', 'KO', 'GE', 'CSCO', 'CVX',
-    'UNH', 'IBM', 'WFC', 'CAT', 'MS', 'AXP', 'GS', 'MRK', 'PM', 'TMUS',
-    'MU', 'RTX', 'ABT', 'TMO', 'MCD', 'CRM', 'PEP', 'ISRG', 'LIN', 'DIS'
-    ]
-
-    tickers = [t.replace('.', '-') for t in top_50_sp_500_tickers]
-    st.markdown(f"Using hardcoded list: {len(tickers)} tickers.")
-    return tickers
-
-# Step 2: Function to get P/E, Market Cap, Revenue Growth for a ticker
-@st.cache_data
-def get_stock_info(ticker: str):
-    try:
-        info = yf.Ticker(ticker).info
-        pe = info.get("trailingPE") 
-        market_cap = info.get("marketCap") 
-        name = info.get("longName") or info.get("shortName") or ticker
-
-        if pe and pe > 0 and market_cap:
-            return {
-                "Ticker": ticker,
-                "Company": name,
-                "P/E Ratio": round(pe, 2),
-                "Market Cap (B)": round(market_cap / 1000000000, 2)  # in billions
-            }
-    except Exception:
-        pass
-    return None
-
-@st.cache_data
-def get_revenue_growth_2025_vs_2024(ticker: str) -> Tuple[Optional[pd.DataFrame], Optional[float]]:
-    """
-    Robustly extract Total Revenue for 2024 and 2025 (if present) and compute 2025 vs 2024 YoY growth.
-    Returns a small DataFrame with rows for 2024 and 2025 and the numeric growth for 2025 (percent).
-    """
-    try:
-        stock = yf.Ticker(ticker)
-        financials = stock.financials
-        if financials is None or 'Total Revenue' not in financials.index:
-            # no revenue data available
-            return None, None
-
-        revenue_row = financials.loc['Total Revenue']
-
-        # Build mapping year -> revenue (take last available value for a given year)
-        year_to_revenue: dict[int, float] = {}
-        for col in revenue_row.index:
-            try:
-                year = pd.to_datetime(col).year
-            except Exception:
-                # fallback: try to parse first 4 digits
-                try:
-                    year = int(str(col)[:4])
-                except Exception:
-                    continue
-            val = pd.to_numeric(revenue_row[col], errors='coerce')
-            if pd.isna(val):
-                continue
-            # Keep the value (if multiple columns map to same year, override with latest encountered)
-            year_to_revenue[year] = float(val)
-
-        # Require both years
-        if 2024 not in year_to_revenue or 2025 not in year_to_revenue:
-            return None, None
-
-        rev2024 = year_to_revenue[2024]
-        rev2025 = year_to_revenue[2025]
-
-        # avoid division by zero / invalid numbers
-        if rev2024 == 0 or pd.isna(rev2024) or pd.isna(rev2025):
-            return None, None
-
-        growth = (rev2025 - rev2024) / rev2024 * 100.0
-        growth_rounded = round(growth, 2)
-
-        # Build a clean DataFrame
-        df = pd.DataFrame({
-            "Year": [2024, 2025],
-            "Revenue (B USD)": [round(rev2024 / 1e9, 2), round(rev2025 / 1e9, 2)],
-            "Growth (%)": [None, growth_rounded]
-        })
-
-        return df, growth_rounded
-
-    except Exception as e:
-        st.markdown(f"Error fetching revenue for {ticker}: {e}")
-        return None, None
-    
-@st.cache_data
-def get_top_growth_companies(tickers: list) -> pd.DataFrame:
-    """
-    From a list of tickers, return a DataFrame of companies that have valid 2025 vs 2024 revenue growth,
-    sorted by descending growth.
-    """
-    results = []
-    for t in tickers:
-        df, growth = get_revenue_growth_2025_vs_2024(t)
-        if growth is None or df is None:
-            continue
-        # safe extraction of revenues
-        try:
-            rev2025 = df.loc[df["Year"] == 2025, "Revenue (B USD)"].iloc[0]
-            rev2024 = df.loc[df["Year"] == 2024, "Revenue (B USD)"].iloc[0]
-        except Exception:
-            continue
-
-        try:
-            info = yf.Ticker(t).info
-            company_name = info.get("longName") or info.get("shortName") or t
-        except Exception:
-            company_name = t
-
-        results.append({
-            "Ticker": t,
-            "Company": company_name,
-            "2025 Revenue (B USD)": rev2025,
-            "2024 Revenue (B USD)": rev2024,
-            "Growth 2025 vs 2024 (%)": growth
-        })
-
-    result_df = pd.DataFrame(results)
-    if result_df.empty:
-        return result_df
-    result_df = result_df.sort_values("Growth 2025 vs 2024 (%)", ascending=False).reset_index(drop=True)
-    return result_df
-
 # --- Navigation state (landing / analysis) ---
 if "page" not in st.session_state:
     st.session_state.page = "landing"
 
 if st.session_state.page == "landing":
     github_url = "https://github.com/ejung2017/PythonProject/tree/main"
-    st.title("📊 Stock Analysis App")
+    st.title("📊 Time Series Stock Prediction App")
     st.write("Enter a ticker in the sidebar and click Load data and ARIMA Time Series Analysis. \n\nFor more information, please visit [link](%s)." % github_url)
     st.write("Please note that Yahoo Finance may have some issues that the Latest Data and Price & Technical Indicators will be shown empty. If so, please refresh the page and try again.")
 
-    # Step 3: Collect P/E for all tickers (this may take ~30-60 seconds for 500 tickers)
-    tickers = get_sp500_tickers()
-
-    # Progress
-    progress = st.progress(0)
-    status = st.empty()
-    data = []
-
-    for i, t in enumerate(tickers):
-        row = get_stock_info(t)
-        if row:
-            data.append(row)
-        if (i + 1) % 10 == 0:
-            progress.progress((i + 1) / len(tickers))
-            status.text(f"Fetching data... {i+1}/{len(tickers)}")
-            
-    # Clean up UI
-    progress.empty()
-    status.empty()
-    st.success(f"Data fetching complete! Loaded {len(data)} stocks.")
-
-    df = pd.DataFrame(data)
-
-    # Show the three top-10 tables only when the user has NOT clicked Load data
-    st.subheader("Top 10 by Highest Trailing P/E Ratio")
-    top_pe = df.nlargest(10, "P/E Ratio")[["Ticker", "Company", "P/E Ratio"]].reset_index(drop=True)
-    st.dataframe(
-        top_pe.style.format({"P/E Ratio": "{:,.5f}"}),
-        use_container_width=True,
-        hide_index=True,
-    )
-
-    st.subheader("Top 10 by Largest Market Cap")
-    top_cap = df.nlargest(10, "Market Cap (B)")[["Ticker", "Company", "Market Cap (B)"]].reset_index(drop=True)
-    st.dataframe(
-        top_cap.style.format({"Market Cap (B)": "{:,.2f}"}),
-        use_container_width=True,
-        hide_index=True,
-    )
-
-    st.subheader("Top 10 by Revenue Growth: 2025 vs 2024")
-    result_df = get_top_growth_companies(tickers)
-
-    # Robust handling: empty results, column name detection, numeric coercion
-    if result_df is None or result_df.empty:
-        st.info("No companies with both 2024 and 2025 reported revenues were found.")
-    else:
-        df_growth = result_df.copy()
-
-        # find a candidate growth column (case-insensitive)
-        growth_candidates = [c for c in df_growth.columns if "growth" in c.lower()]
-        if not growth_candidates:
-            st.warning(f"No growth column found. Available columns: {', '.join(df_growth.columns)}")
-        else:
-            growth_col = growth_candidates[0]
-            # coerce to numeric (drop non-numeric)
-            df_growth[growth_col] = pd.to_numeric(df_growth[growth_col], errors="coerce")
-            df_growth = df_growth.dropna(subset=[growth_col])
-
-            # normalize column name used downstream
-            if growth_col != "Growth 2025 vs 2024 (%)":
-                df_growth = df_growth.rename(columns={growth_col: "Growth 2025 vs 2024 (%)"})
-
-            required_cols = ["Ticker", "Company", "2024 Revenue (B USD)", "2025 Revenue (B USD)", "Growth 2025 vs 2024 (%)"]
-            missing = [c for c in required_cols if c not in df_growth.columns]
-            if missing:
-                st.warning(f"Missing columns for display: {missing}. Available columns: {', '.join(df_growth.columns)}")
-            else:
-                top_revenue_growth = df_growth.nlargest(10, "Growth 2025 vs 2024 (%)")[required_cols].reset_index(drop=True)
-                st.dataframe(
-                    top_revenue_growth.style.format({
-                        "2024 Revenue (B USD)": "{:,.2f}",
-                        "2025 Revenue (B USD)": "{:,.2f}",
-                        "Growth 2025 vs 2024 (%)": "{:+.2f}%"
-                    }),
-                    use_container_width=True,
-                    hide_index=True
-                )
+    # US, Korea (Samsung), China (Tencent), France (LVMH), Japan (Toyota)
+    top_companies_ticker = ['AAPL', 'GOOGL', '005930.KS', '0700.HK', 'MC.PA', '7203.T']
 
 elif st.session_state.page == "analysis":
-    st.title("📊 Stock Analysis App")
+    st.title("📊 Time Series Stock Prediction App")
     st.header(f"Machine Learning Predictions of {ticker}")
+    
+    # Rest of your analysis code continues here...
     st.write("""
     This app uses various Machine Learning Models to predict whether **tomorrow**'s stock price trend will be **up (Buy 📈)** or **down (Sell 📉)**.
     """)
@@ -360,110 +247,27 @@ elif st.session_state.page == "analysis":
     Happy investing! 🚀
     """)
         
+    if not ticker:
+        st.error("Please enter a ticker symbol in the sidebar.")
+        st.stop()
+    
+    # Prepare data
+    data, error = prepare_stock_data(ticker, START, END)
+    
+    if error:
+        st.error(f"Error processing ticker {ticker}: {error}")
+        st.info("Please check that the ticker symbol is correct and try again.")
+        st.stop()
+
     st.divider()
     st.subheader("Model Recommendations")
-
-    data = yf.download(ticker, start=START, end=END) 
-
-    data.columns = data.columns.droplevel(1)
-    data['Daily_Return'] = data['Close'].pct_change()
-
-    data['SMA5'] = talib.SMA(data['Close'], timeperiod=5)
-    data['SMA20'] = talib.SMA(data['Close'], timeperiod=20)
-
-    data['EMA60'] = talib.EMA(data['Close'], timeperiod=60)
-    data['RSI'] = talib.RSI(data['Close'], timeperiod=14)
-    data["MACD"], data["MACD_SIGNAL"], data["MACD_HIST"] = talib.MACD(data["Close"])
-    data['BB_Low'], data['BB_Mid'], data['BB_High'] = talib.BBANDS(data["Close"], timeperiod=20)
-    data["ATR"] = talib.ATR(data['High'], data['Close'], data['Low'], timeperiod=14)
-    data["ADX"] = talib.ADX(data["High"], data["Low"], data["Close"], timeperiod=14)
-    data["OBV"] = talib.OBV(data["Close"], data["Volume"])
-
-    # Momentum Indicators
-    data['STOCH_K'], data['STOCH_D'] = talib.STOCH(
-        data['High'], data['Low'], data['Close'],
-        fastk_period=14,
-        slowk_period=3, slowk_matype=0,
-        slowd_period=3, slowd_matype=0
-    )
-
-    data['CCI_14'] = talib.CCI(data['High'], data['Low'], data['Close'], timeperiod=14)
-    data['CCI_20'] = talib.CCI(data['High'], data['Low'], data['Close'], timeperiod=20)
-
-    data['WILLR_14'] = talib.WILLR(data['High'], data['Low'], data['Close'], timeperiod=14)
-
-    data['MOM_10'] = talib.MOM(data['Close'], timeperiod=10)
-    data['MOM_14'] = talib.MOM(data['Close'], timeperiod=14)
-
-    data['ROC_12'] = talib.ROC(data['Close'], timeperiod=12)
-
-    # Trend Strength Indicators
-    data['ADX_14'] = talib.ADX(data['High'], data['Low'], data['Close'], timeperiod=14)
-    data['PLUS_DI'] = talib.PLUS_DI(data['High'], data['Low'], data['Close'], timeperiod=14)
-    data['MINUS_DI'] = talib.MINUS_DI(data['High'], data['Low'], data['Close'], timeperiod=14)
-
-    data['AROONOSC_14'] = talib.AROONOSC(data['High'], data['Low'], timeperiod=14)
-
-    # Volume Indicators
-    data['OBV'] = talib.OBV(data['Close'], data['Volume'])
-    data['MFI_14'] = talib.MFI(data['High'], data['Low'], data['Close'], data['Volume'], timeperiod=14)
-
-    data['AD'] = talib.AD(data['High'], data['Low'], data['Close'], data['Volume'])
-
-    data['ADOSC'] = talib.ADOSC(data['High'], data['Low'], data['Close'], data['Volume'], 
-                                fastperiod=3, slowperiod=10)
-
-    # Other
-    data['SAR'] = talib.SAR(data['High'], data['Low'], acceleration=0.02, maximum=0.2)
-    data['NATR_14'] = talib.NATR(data['High'], data['Low'], data['Close'], timeperiod=14)
-
-
-    data['Daily_Return'] = data['Close'].pct_change()
-    data['nxt_ret'] = data['Daily_Return'].shift(periods=-1)
-    data['prev_close'] = data['Close'].shift(periods=1)
-    data['prev_open'] = data['Open'].shift(periods=1)
-
-    # Ensure SMA60 exists for cross strategy (use rolling fallback if not computed)
-    if "SMA60" not in data:
-        data["SMA60"] = data["Close"].rolling(window=60, min_periods=1).mean()
-
-    # RSI14 fallback if needed
-    if "RSI14" not in data or data["RSI14"].isna().all():
-        delta = data["Close"].diff()
-        up = delta.clip(lower=0)
-        down = -delta.clip(upper=0)
-        roll_up = up.rolling(window=14, min_periods=14).mean()
-        roll_down = down.rolling(window=14, min_periods=14).mean()
-        rs = roll_up / roll_down
-        data["RSI14"] = 100 - (100 / (1 + rs))
-
-    # MACD fallback handled earlier; ensure columns exist
-    if "MACD" not in data or "MACD_SIGNAL" not in data:
-        ema12 = data["Close"].ewm(span=12, adjust=False).mean()
-        ema26 = data["Close"].ewm(span=26, adjust=False).mean()
-        data["MACD"] = ema12 - ema26
-        data["MACD_SIGNAL"] = data["MACD"].ewm(span=9, adjust=False).mean()
-        data["MACD_HIST"] = data["MACD"] - data["MACD_SIGNAL"]
-
-    # Bollinger fallback ensure columns
-    if not {"BB_middle", "BB_upper", "BB_lower"}.issubset(set(data.columns)):
-        sma20 = data["Close"].rolling(window=20, min_periods=20).mean()
-        std20 = data["Close"].rolling(window=20, min_periods=20).std()
-        data["BB_middle"] = sma20
-        data["BB_upper"] = sma20 + 2 * std20
-        data["BB_lower"] = sma20 - 2 * std20
-
-    # Making the label (depedent y-variable) to be golden cross (continuously going up as SMA5 is greater than SMA20)
-    data.loc[data['SMA5'] > data['SMA20'], 'label'] = 1
-    data.loc[data['SMA5'] <= data['SMA20'], 'label'] = -1
-    data['label'] = data['label'].shift(periods=-1) 
 
     tmr_data = data.tail(1)
     data = data.dropna()
 
     x_col = ['prev_close', 'prev_open', 'SMA5', 'SMA20', 'EMA60', 'RSI', 'MACD', 'MACD_SIGNAL', "MACD_HIST", "BB_Low", "BB_Mid", "BB_High", "ATR", "ADX", "OBV", 'STOCH_K', 'STOCH_D', 'CCI_14', 'CCI_20',
-       'WILLR_14', 'MOM_10', 'MOM_14', 'ROC_12', 'ADX_14', 'PLUS_DI',
-       'MINUS_DI', 'AROONOSC_14', 'MFI_14', 'AD', 'ADOSC', 'SAR', 'NATR_14', "Daily_Return"]
+        'WILLR_14', 'MOM_10', 'MOM_14', 'ROC_12', 'ADX_14', 'PLUS_DI',
+        'MINUS_DI', 'AROONOSC_14', 'MFI_14', 'AD', 'ADOSC', 'SAR', 'NATR_14', "Daily_Return"]
     y_col = ['label']
 
     # 1 month (< 30 trading days) -- changed to 3 months ago (experiment)
@@ -479,7 +283,7 @@ elif st.session_state.page == "analysis":
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
     pred_data_x = pred_month[x_col]
     pred_data_y = pred_month[y_col]
-
+    
     # ML Models
     result_dict = {}
     #Decision Tree
@@ -491,7 +295,6 @@ elif st.session_state.page == "analysis":
     result_dict['Decision Tree']['tmr'] = clf.predict(tmr_data[x_col])
     result_dict['Decision Tree']['latest_month'] = clf.predict(pred_data_x)
     result_dict['Decision Tree']['status'] = "Buy 📈" if result_dict['Decision Tree']['tmr'] == 1 else "Sell 📉"
-    # st.write(f"Decision Tree Prediction: {status}")
 
     #KNN
     result_dict['KNN'] = {}
@@ -502,7 +305,6 @@ elif st.session_state.page == "analysis":
     result_dict['KNN']['tmr'] = knn.predict(tmr_data[x_col])
     result_dict['KNN']['latest_month'] = knn.predict(pred_data_x)
     result_dict['KNN']['status'] = "Buy 📈" if result_dict['KNN']['tmr'] == 1 else "Sell 📉"
-    # st.write(f"KNN Prediction: {status}")
 
     #Logistic Regression
     result_dict['Logistic Regression'] = {}
@@ -513,7 +315,6 @@ elif st.session_state.page == "analysis":
     result_dict['Logistic Regression']['tmr'] = log_reg.predict(tmr_data[x_col])
     result_dict['Logistic Regression']['latest_month'] = log_reg.predict(pred_data_x)  # Remove [x_col]
     result_dict['Logistic Regression']['status'] = "Buy 📈" if result_dict['Logistic Regression']['tmr'][0] == 1 else "Sell 📉"
-    # st.write(f"Logistic Regression Prediction: {status}")
 
     #Random Forest
     result_dict['Random Forest'] = {}
@@ -524,7 +325,6 @@ elif st.session_state.page == "analysis":
     result_dict['Random Forest']['tmr'] = random.predict(tmr_data[x_col])
     result_dict['Random Forest']['latest_month'] = random.predict(pred_data_x)
     result_dict['Random Forest']['status'] = "Buy 📈" if result_dict['Random Forest']['tmr'] == 1 else "Sell 📉"
-    # st.write(f"Random Forest Prediction: {status}")
 
     #SVM
     result_dict['SVM'] = {}
@@ -535,6 +335,16 @@ elif st.session_state.page == "analysis":
     result_dict['SVM']['tmr'] = svm.predict(tmr_data[x_col])
     result_dict['SVM']['latest_month'] = svm.predict(pred_data_x)
     result_dict['SVM']['status'] = "Buy 📈" if result_dict['SVM']['tmr'] == 1 else "Sell 📉"
+
+    #GaussianNB
+    result_dict['GaussianNB'] = {}
+    gnb = GaussianNB()
+    gnb.fit(X_train, y_train)
+    result_dict['GaussianNB']['test'] = svm.predict(X_test)
+    result_dict['GaussianNB']['train'] = svm.predict(X_train)
+    result_dict['GaussianNB']['tmr'] = svm.predict(tmr_data[x_col])
+    result_dict['GaussianNB']['latest_month'] = svm.predict(pred_data_x)
+    result_dict['GaussianNB']['status'] = "Buy 📈" if result_dict['GaussianNB']['tmr'] == 1 else "Sell 📉"
 
     # Collect qualifying models and sort by test accuracy descending
     qualifying_models = []
@@ -572,16 +382,10 @@ elif st.session_state.page == "analysis":
                 st.write(f"{m} Train Set Accuracy: {train_acc*100:.2f}%")
         
     st.divider()
-    st.subheader("Model Credibility")
-    ## add 
-    # 2020-01-01 - 2026-01-01
-    # model prediction history 
-    # lastest 1month prediction: 30days 
-    # date: 2020-01-01 - 2025-11-30 -> train/test 
-    # prediction: 2025-12-01 - 2025-12-31 -> performance 
+    st.subheader("Model Reliability")
 
     # Evaluation
-    with st.expander("Click to see the details"):
+    with st.expander("Click to see the evaluation details"):
         for m in qualifying_names: 
             # Accuracy
             pred_acc = accuracy_score(pred_data_y, result_dict[m]['latest_month'])
@@ -617,8 +421,8 @@ elif st.session_state.page == "analysis":
             # Create a pandas DataFrame for better readability
             cm_df = pd.DataFrame(
                 cm,
-                columns=[f'True {label}' for label in [-1, 1]],
-                index=[f'Pred {label}' for label in [-1, 1]]
+                index=[f'True {label}' for label in [-1, 1]],
+                columns=[f'Pred {label}' for label in [-1, 1]]
             )
 
             fig, ax = plt.subplots(figsize=(4, 4))
