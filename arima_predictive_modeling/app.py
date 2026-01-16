@@ -6,7 +6,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import talib
 from statsmodels.tsa.arima.model import ARIMA
-from typing import Optional, Tuple
 from dateutil.relativedelta import relativedelta
 
 from sklearn.model_selection import train_test_split
@@ -19,8 +18,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, ConfusionMatrixDisplay
 
 # ===== DATA PREPARATION FUNCTION =====
+@st.cache_data(ttl=3600)
 def prepare_stock_data(ticker: str, start_date, end_date):
-    """Download and prepare stock data with technical indicators."""
     try:
         data = yf.download(ticker, start=start_date, end=end_date)
         
@@ -125,6 +124,106 @@ def prepare_stock_data(ticker: str, start_date, end_date):
     except Exception as e:
         return None, str(e)
 
+@st.cache_data(ttl=36000)
+def top_model_selection(data, end_date): 
+    tmr_data = data.tail(1)
+    data = data.dropna()
+    
+    three_months_ago = end_date + relativedelta(months=-3)
+    pred_month = data.loc[three_months_ago:]
+    training = data.loc[:three_months_ago]
+
+    #feature selection 
+    x_col = ['prev_close', 'prev_open', 'SMA5', 'SMA20', 'EMA60', 'RSI', 'MACD', 'MACD_SIGNAL', "MACD_HIST", "BB_Low", "BB_Mid", "BB_High", "ATR", "ADX", "OBV", 'STOCH_K', 'STOCH_D', 'CCI_14', 'CCI_20',
+        'WILLR_14', 'MOM_10', 'MOM_14', 'ROC_12', 'ADX_14', 'PLUS_DI',
+        'MINUS_DI', 'AROONOSC_14', 'MFI_14', 'AD', 'ADOSC', 'SAR', 'NATR_14', "Daily_Return"]
+    y_col = ['label']
+
+    # Train data selection
+    X = training[x_col]
+    y = training[y_col]
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    pred_data_x = pred_month[x_col]
+    pred_data_y = pred_month[y_col]
+
+    result_dict = {}
+
+    ## ML Models 
+    #Decision Tree
+    result_dict['Decision Tree'] = {}
+    clf = DecisionTreeClassifier(max_depth=3)
+    clf = clf.fit(X_train, y_train)
+    result_dict['Decision Tree']['test'] = clf.predict(X_test)
+    result_dict['Decision Tree']['train'] = clf.predict(X_train)
+    result_dict['Decision Tree']['tmr'] = clf.predict(tmr_data[x_col])
+    result_dict['Decision Tree']['latest_month'] = clf.predict(pred_data_x)
+    result_dict['Decision Tree']['status'] = "Buy 📈" if result_dict['Decision Tree']['tmr'] == 1 else "Sell 📉"
+
+    #KNN
+    result_dict['KNN'] = {}
+    knn = KNeighborsClassifier(n_neighbors=10)
+    knn.fit(X_train, y_train)
+    result_dict['KNN']['test'] = knn.predict(X_test)
+    result_dict['KNN']['train'] = knn.predict(X_train)
+    result_dict['KNN']['tmr'] = knn.predict(tmr_data[x_col])
+    result_dict['KNN']['latest_month'] = knn.predict(pred_data_x)
+    result_dict['KNN']['status'] = "Buy 📈" if result_dict['KNN']['tmr'] == 1 else "Sell 📉"
+
+    #Logistic Regression
+    result_dict['Logistic Regression'] = {}
+    log_reg = LogisticRegression()
+    log_reg.fit(X_train, y_train)
+    result_dict['Logistic Regression']['test'] = log_reg.predict(X_test)
+    result_dict['Logistic Regression']['train'] = log_reg.predict(X_train)
+    result_dict['Logistic Regression']['tmr'] = log_reg.predict(tmr_data[x_col])
+    result_dict['Logistic Regression']['latest_month'] = log_reg.predict(pred_data_x)  # Remove [x_col]
+    result_dict['Logistic Regression']['status'] = "Buy 📈" if result_dict['Logistic Regression']['tmr'][0] == 1 else "Sell 📉"
+
+    #Random Forest
+    result_dict['Random Forest'] = {}
+    random = RandomForestClassifier(n_estimators=30,max_depth=5)
+    random.fit(X_train, y_train)
+    result_dict['Random Forest']['test'] = random.predict(X_test)
+    result_dict['Random Forest']['train'] = random.predict(X_train)
+    result_dict['Random Forest']['tmr'] = random.predict(tmr_data[x_col])
+    result_dict['Random Forest']['latest_month'] = random.predict(pred_data_x)
+    result_dict['Random Forest']['status'] = "Buy 📈" if result_dict['Random Forest']['tmr'] == 1 else "Sell 📉"
+
+    #SVM
+    result_dict['SVM'] = {}
+    svm = SVC()
+    svm.fit(X_train, y_train)
+    result_dict['SVM']['test'] = svm.predict(X_test)
+    result_dict['SVM']['train'] = svm.predict(X_train)
+    result_dict['SVM']['tmr'] = svm.predict(tmr_data[x_col])
+    result_dict['SVM']['latest_month'] = svm.predict(pred_data_x)
+    result_dict['SVM']['status'] = "Buy 📈" if result_dict['SVM']['tmr'] == 1 else "Sell 📉"
+
+    #GaussianNB
+    result_dict['GaussianNB'] = {}
+    gnb = GaussianNB()
+    gnb.fit(X_train, y_train)
+    result_dict['GaussianNB']['test'] = svm.predict(X_test)
+    result_dict['GaussianNB']['train'] = svm.predict(X_train)
+    result_dict['GaussianNB']['tmr'] = svm.predict(tmr_data[x_col])
+    result_dict['GaussianNB']['latest_month'] = svm.predict(pred_data_x)
+    result_dict['GaussianNB']['status'] = "Buy 📈" if result_dict['GaussianNB']['tmr'] == 1 else "Sell 📉"
+
+    # Collect qualifying models and sort by test accuracy descending
+    qualifying_models = []
+    for m in result_dict.keys():
+        test_acc = accuracy_score(result_dict[m]['test'], y_test)
+        train_acc = accuracy_score(result_dict[m]['train'], y_train)
+        status = result_dict[m]['status']
+        if train_acc - test_acc < 0.05 and test_acc > 0.8 and train_acc > 0.8:
+            qualifying_models.append((m, test_acc, status))
+
+    # Sort by test_acc descending
+    qualifying_models.sort(key=lambda x: x[1], reverse=True)
+
+    return qualifying_models, result_dict, y_test, y_train, pred_data_y
+
 st.set_page_config(
     page_title="📊 Time Series Stock Prediction App",
     page_icon="📈",
@@ -205,12 +304,36 @@ if "page" not in st.session_state:
 
 if st.session_state.page == "landing":
     github_url = "https://github.com/ejung2017/PythonProject/tree/main"
-    st.title("📊 Time Series Stock Prediction App")
+    st.title("📊 Stock Prediction App")
     st.write("Enter a ticker in the sidebar and click Load data and ARIMA Time Series Analysis. \n\nFor more information, please visit [link](%s)." % github_url)
     st.write("Please note that Yahoo Finance may have some issues that the Latest Data and Price & Technical Indicators will be shown empty. If so, please refresh the page and try again.")
 
     # US, Korea (Samsung), China (Tencent), France (LVMH), Japan (Toyota)
     top_companies_ticker = ['AAPL', 'GOOGL', '005930.KS', '0700.HK', 'MC.PA', '7203.T']
+
+    START = "2020-01-01"
+    END = date.today()
+    
+    # Prepare data for all companies
+    company_data = {}
+    for ticker_symbol in top_companies_ticker:
+        data, error = prepare_stock_data(ticker_symbol, START, END)
+        company_data[ticker_symbol] = data
+    
+    # ML Back Testing for all companies
+    company_models = {}
+    for ticker_symbol in top_companies_ticker:
+        qualifying_models, _, _, _, _ = top_model_selection(company_data[ticker_symbol], END)
+        company_models[ticker_symbol] = qualifying_models
+    
+    # Result Table 
+    st.divider()
+    st.subheader("Top Companies Predictions")
+    stocks_df = pd.DataFrame({
+        "Tickers": top_companies_ticker,
+        "ML Prediction": [company_models[ticker_symbol][0][2] if company_models[ticker_symbol] else "No qualifying models" for ticker_symbol in top_companies_ticker]
+    })
+    st.dataframe(stocks_df.set_index("Tickers"), use_container_width=True, hide_index=False)
 
 elif st.session_state.page == "analysis":
     st.title("📊 Time Series Stock Prediction App")
@@ -262,103 +385,9 @@ elif st.session_state.page == "analysis":
     st.divider()
     st.subheader("Model Recommendations")
 
-    tmr_data = data.tail(1)
-    data = data.dropna()
-
-    x_col = ['prev_close', 'prev_open', 'SMA5', 'SMA20', 'EMA60', 'RSI', 'MACD', 'MACD_SIGNAL', "MACD_HIST", "BB_Low", "BB_Mid", "BB_High", "ATR", "ADX", "OBV", 'STOCH_K', 'STOCH_D', 'CCI_14', 'CCI_20',
-        'WILLR_14', 'MOM_10', 'MOM_14', 'ROC_12', 'ADX_14', 'PLUS_DI',
-        'MINUS_DI', 'AROONOSC_14', 'MFI_14', 'AD', 'ADOSC', 'SAR', 'NATR_14', "Daily_Return"]
-    y_col = ['label']
-
-    # 1 month (< 30 trading days) -- changed to 3 months ago (experiment)
-    three_month_ago = END + relativedelta(months=-3) 
-
-    pred_month = data.loc[three_month_ago:]
-
-    training = data.loc[:three_month_ago]
-
-    X = training[x_col]
-    y = training[y_col]
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-    pred_data_x = pred_month[x_col]
-    pred_data_y = pred_month[y_col]
-    
-    # ML Models
-    result_dict = {}
-    #Decision Tree
-    result_dict['Decision Tree'] = {}
-    clf = DecisionTreeClassifier(max_depth=3)
-    clf = clf.fit(X_train, y_train)
-    result_dict['Decision Tree']['test'] = clf.predict(X_test)
-    result_dict['Decision Tree']['train'] = clf.predict(X_train)
-    result_dict['Decision Tree']['tmr'] = clf.predict(tmr_data[x_col])
-    result_dict['Decision Tree']['latest_month'] = clf.predict(pred_data_x)
-    result_dict['Decision Tree']['status'] = "Buy 📈" if result_dict['Decision Tree']['tmr'] == 1 else "Sell 📉"
-
-    #KNN
-    result_dict['KNN'] = {}
-    knn = KNeighborsClassifier(n_neighbors=10)
-    knn.fit(X_train, y_train)
-    result_dict['KNN']['test'] = knn.predict(X_test)
-    result_dict['KNN']['train'] = knn.predict(X_train)
-    result_dict['KNN']['tmr'] = knn.predict(tmr_data[x_col])
-    result_dict['KNN']['latest_month'] = knn.predict(pred_data_x)
-    result_dict['KNN']['status'] = "Buy 📈" if result_dict['KNN']['tmr'] == 1 else "Sell 📉"
-
-    #Logistic Regression
-    result_dict['Logistic Regression'] = {}
-    log_reg = LogisticRegression()
-    log_reg.fit(X_train, y_train)
-    result_dict['Logistic Regression']['test'] = log_reg.predict(X_test)
-    result_dict['Logistic Regression']['train'] = log_reg.predict(X_train)
-    result_dict['Logistic Regression']['tmr'] = log_reg.predict(tmr_data[x_col])
-    result_dict['Logistic Regression']['latest_month'] = log_reg.predict(pred_data_x)  # Remove [x_col]
-    result_dict['Logistic Regression']['status'] = "Buy 📈" if result_dict['Logistic Regression']['tmr'][0] == 1 else "Sell 📉"
-
-    #Random Forest
-    result_dict['Random Forest'] = {}
-    random = RandomForestClassifier(n_estimators=30,max_depth=5)
-    random.fit(X_train, y_train)
-    result_dict['Random Forest']['test'] = random.predict(X_test)
-    result_dict['Random Forest']['train'] = random.predict(X_train)
-    result_dict['Random Forest']['tmr'] = random.predict(tmr_data[x_col])
-    result_dict['Random Forest']['latest_month'] = random.predict(pred_data_x)
-    result_dict['Random Forest']['status'] = "Buy 📈" if result_dict['Random Forest']['tmr'] == 1 else "Sell 📉"
-
-    #SVM
-    result_dict['SVM'] = {}
-    svm = SVC()
-    svm.fit(X_train, y_train)
-    result_dict['SVM']['test'] = svm.predict(X_test)
-    result_dict['SVM']['train'] = svm.predict(X_train)
-    result_dict['SVM']['tmr'] = svm.predict(tmr_data[x_col])
-    result_dict['SVM']['latest_month'] = svm.predict(pred_data_x)
-    result_dict['SVM']['status'] = "Buy 📈" if result_dict['SVM']['tmr'] == 1 else "Sell 📉"
-
-    #GaussianNB
-    result_dict['GaussianNB'] = {}
-    gnb = GaussianNB()
-    gnb.fit(X_train, y_train)
-    result_dict['GaussianNB']['test'] = svm.predict(X_test)
-    result_dict['GaussianNB']['train'] = svm.predict(X_train)
-    result_dict['GaussianNB']['tmr'] = svm.predict(tmr_data[x_col])
-    result_dict['GaussianNB']['latest_month'] = svm.predict(pred_data_x)
-    result_dict['GaussianNB']['status'] = "Buy 📈" if result_dict['GaussianNB']['tmr'] == 1 else "Sell 📉"
-
-    # Collect qualifying models and sort by test accuracy descending
-    qualifying_models = []
-    for m in result_dict.keys():
-        test_acc = accuracy_score(result_dict[m]['test'], y_test)
-        train_acc = accuracy_score(result_dict[m]['train'], y_train)
-        if train_acc - test_acc < 0.05 and test_acc > 0.8 and train_acc > 0.8:
-            qualifying_models.append((m, test_acc))
-
-    # Sort by test_acc descending
-    qualifying_models.sort(key=lambda x: x[1], reverse=True)
-
+    qualifying_models, result_dict, y_test, y_train, pred_data_y = top_model_selection(data, END)
     # Display predictions in sorted order
-    for m, test_acc in qualifying_models:
+    for m, test_acc, _ in qualifying_models:
         st.markdown(f"**{m} Prediction**: {result_dict[m]['status']}")
 
     with st.expander("Click to see the details"):
