@@ -225,7 +225,7 @@ def top_model_selection(data, end_date):
     return qualifying_models, result_dict, y_test, y_train, pred_data_y
 
 st.set_page_config(
-    page_title="📊 Time Series Stock Prediction App",
+    page_title="📊 Stock Prediction App",
     page_icon="📈",
     layout="centered",
     initial_sidebar_state="expanded",
@@ -305,8 +305,9 @@ if "page" not in st.session_state:
 if st.session_state.page == "landing":
     github_url = "https://github.com/ejung2017/PythonProject/tree/main"
     st.title("📊 Stock Prediction App")
-    st.write("Enter a ticker in the sidebar and click Load data and ARIMA Time Series Analysis. \n\nFor more information, please visit [link](%s)." % github_url)
-    st.write("Please note that Yahoo Finance may have some issues that the Latest Data and Price & Technical Indicators will be shown empty. If so, please refresh the page and try again.")
+    st.markdown("Enter a ticker in the sidebar and click **Load Data** button for Stock Prediction Results.")
+    st.image("arima_predictive_modeling/ticker.png", caption="How to search for tickers", width='content')
+    st.markdown("⚠️ Please note that **Yahoo Finance** may have some issues leading to ValueError. If so, please refresh the page and try again.")
 
     # US, Korea (Samsung), China (Tencent), France (LVMH), Japan (Toyota)
     top_companies_ticker = ['AAPL', 'GOOGL', '005930.KS', '0700.HK', 'MC.PA', '7203.T']
@@ -320,6 +321,12 @@ if st.session_state.page == "landing":
         data, error = prepare_stock_data(ticker_symbol, START, END)
         company_data[ticker_symbol] = data
     
+    # Company names 
+    company_name = {}
+    for ticker_symbol in top_companies_ticker:
+        ticker = yf.Ticker(ticker_symbol)
+        company_name[ticker_symbol] = ticker.info.get('longName')
+
     # ML Back Testing for all companies
     company_models = {}
     for ticker_symbol in top_companies_ticker:
@@ -331,12 +338,19 @@ if st.session_state.page == "landing":
     st.subheader("Top Companies Predictions")
     stocks_df = pd.DataFrame({
         "Tickers": top_companies_ticker,
+        "Company": company_name.values(),
         "ML Prediction": [company_models[ticker_symbol][0][2] if company_models[ticker_symbol] else "No qualifying models" for ticker_symbol in top_companies_ticker]
     })
     st.dataframe(stocks_df.set_index("Tickers"), use_container_width=True, hide_index=False)
 
+    # 
+
+    # Credit 
+    st.divider()
+    st.markdown("For more information, please visit [link](%s)." % github_url)
+
 elif st.session_state.page == "analysis":
-    st.title("📊 Time Series Stock Prediction App")
+    st.title("📊 Stock Prediction App")
     st.header(f"Machine Learning Predictions of {ticker}")
     
     # Rest of your analysis code continues here...
@@ -346,7 +360,7 @@ elif st.session_state.page == "analysis":
 
     with st.expander("Here's a simple, step-by-step explanation of how the prediction is made"):
         st.write("""
-    1. **Define the Target (What We Want to Predict)**  
+    1. **Define the Target Ticker (What We Want to Predict)**  
     We create a label called `label` that tells us the future trend:
     - If the 5-day Simple Moving Average (SMA5) is **above** the 20-day SMA (SMA20) → this is a classic **golden cross**, a bullish signal → label = **1 (Up/Buy)**
     - If SMA5 is **below** SMA20 → bearish signal → label = **-1 (Down/Sell)**
