@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import talib
 from statsmodels.tsa.arima.model import ARIMA
 from dateutil.relativedelta import relativedelta
+from datetime import datetime
 
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
@@ -124,14 +125,22 @@ def prepare_stock_data(ticker: str, start_date, end_date):
     except Exception as e:
         return None, str(e)
 
+def profit_loss_calculation(data, end_date): 
+    one_month_ago = end_date + relativedelta(months=-1)
+    one_month_df = data.loc[one_month_ago:]
+    first_day_price = one_month_df['Close'][0]
+    last_day_price = one_month_df['Close'][-1]
+    profit_loss_pct = (last_day_price / first_day_price - 1)*100
+    return profit_loss_pct
+
 @st.cache_data(ttl=36000)
 def top_model_selection(data, end_date): 
     tmr_data = data.tail(1)
     data = data.dropna()
-    
-    three_months_ago = end_date + relativedelta(months=-3)
-    pred_month = data.loc[three_months_ago:]
-    training = data.loc[:three_months_ago]
+
+    one_month_ago = end_date + relativedelta(months=-1)
+    pred_month = data.loc[one_month_ago:]
+    training = data.loc[:one_month_ago]
 
     #feature selection 
     x_col = ['prev_close', 'prev_open', 'SMA5', 'SMA20', 'EMA60', 'RSI', 'MACD', 'MACD_SIGNAL', "MACD_HIST", "BB_Low", "BB_Mid", "BB_High", "ATR", "ADX", "OBV", 'STOCH_K', 'STOCH_D', 'CCI_14', 'CCI_20',
@@ -315,35 +324,47 @@ if st.session_state.page == "landing":
     START = "2020-01-01"
     END = date.today()
     
-    # Prepare data for all companies
-    company_data = {}
+    # Combine all data into one dictionary
+    company_data_all = {}
     for ticker_symbol in top_companies_ticker:
         data, error = prepare_stock_data(ticker_symbol, START, END)
-        company_data[ticker_symbol] = data
-    
-    # Company names 
-    company_name = {}
-    for ticker_symbol in top_companies_ticker:
-        ticker = yf.Ticker(ticker_symbol)
-        company_name[ticker_symbol] = ticker.info.get('longName')
-
-    # ML Back Testing for all companies
-    company_models = {}
-    for ticker_symbol in top_companies_ticker:
-        qualifying_models, _, _, _, _ = top_model_selection(company_data[ticker_symbol], END)
-        company_models[ticker_symbol] = qualifying_models
+        
+        if data is not None:
+            # Get company name
+            company_info = yf.Ticker(ticker_symbol)
+            company_name = company_info.info.get('shortName', 'N/A')
+            
+            # Get ML models
+            qualifying_models, _, _, _, _ = top_model_selection(data, END)
+            
+            # Get P&L
+            profit_loss_pct = profit_loss_calculation(data, END)
+            
+            # Store all in one dictionary
+            company_data_all[ticker_symbol] = {
+                'name': company_name,
+                'qualifying_models': qualifying_models,
+                'profit_loss_pct': profit_loss_pct,
+                'prediction': qualifying_models[0][2] if qualifying_models else "No qualifying models"
+            }
+        else:
+            company_data_all[ticker_symbol] = {
+                'name': 'N/A',
+                'qualifying_models': [],
+                'profit_loss_pct': 0,
+                'prediction': "Error loading data"
+            }
     
     # Result Table 
     st.divider()
     st.subheader("Top Companies Predictions")
     stocks_df = pd.DataFrame({
-        "Tickers": top_companies_ticker,
-        "Company": company_name.values(),
-        "ML Prediction": [company_models[ticker_symbol][0][2] if company_models[ticker_symbol] else "No qualifying models" for ticker_symbol in top_companies_ticker]
+        "Tickers": list(company_data_all.keys()),
+        "Company": [company_data_all[tick]['name'] for tick in top_companies_ticker],
+        "ML Prediction": [company_data_all[tick]['prediction'] for tick in top_companies_ticker],
+        "Past 1 Month P/L (%)": [f"{company_data_all[tick]['profit_loss_pct']:.2f}%" for tick in top_companies_ticker]
     })
     st.dataframe(stocks_df.set_index("Tickers"), use_container_width=True, hide_index=False)
-
-    # 
 
     # Credit 
     st.divider()
@@ -398,6 +419,7 @@ elif st.session_state.page == "analysis":
 
     st.divider()
     st.subheader("Model Recommendations")
+    st.markdown("📢 This section will only show ML Predictions that have accuracy greater than 80% and generalization gap less than 5%.")
 
     qualifying_models, result_dict, y_test, y_train, pred_data_y = top_model_selection(data, END)
     # Display predictions in sorted order
@@ -428,193 +450,54 @@ elif st.session_state.page == "analysis":
     st.subheader("Model Reliability")
 
     # Evaluation
-    with st.expander("Click to see the evaluation details"):
-        for m in qualifying_names: 
-            # Accuracy
-            pred_acc = accuracy_score(pred_data_y, result_dict[m]['latest_month'])
+    # with st.expander("Click to see the evaluation details"): 이걸 쓸지 말지 모르겠음 
+    for m in qualifying_names: 
+        # Accuracy
+        pred_acc = accuracy_score(pred_data_y, result_dict[m]['latest_month'])
 
-            # Calculate precision, recall, F1 for test set
-            precision_test = precision_score(y_test, result_dict[m]['test'], average='weighted')
-            recall_test = recall_score(y_test, result_dict[m]['test'], average='weighted')
-            f1_test = f1_score(y_test, result_dict[m]['test'], average='weighted')
-            
-            # For train set
-            precision_train = precision_score(y_train, result_dict[m]['train'], average='weighted')
-            recall_train = recall_score(y_train, result_dict[m]['train'], average='weighted')
-            f1_train = f1_score(y_train, result_dict[m]['train'], average='weighted')
-            
-            # For latest month prediction
-            precision_pred = precision_score(pred_data_y, result_dict[m]['latest_month'], average='weighted')
-            recall_pred = recall_score(pred_data_y, result_dict[m]['latest_month'], average='binary')
-            f1_pred = f1_score(pred_data_y, result_dict[m]['latest_month'], average='weighted')
-            
-            
-            st.markdown(f"**{m}**:")
-            st.markdown(f"""
-            - Accuracy: {pred_acc*100:.2f}%
-            - Precision: {precision_pred*100:.2f}%
-            - Recall: {recall_pred*100:.2f}%
-            - F1 Score: {f1_pred*100:.2f}%
-            """)
-            
-            # Confusion Matrix for latest month prediction
-            cm = confusion_matrix(pred_data_y, result_dict[m]['latest_month'])
-            # st.markdown(f"**Confusion Matrix**:")
-            
-            # Create a pandas DataFrame for better readability
-            cm_df = pd.DataFrame(
-                cm,
-                index=[f'True {label}' for label in [-1, 1]],
-                columns=[f'Pred {label}' for label in [-1, 1]]
-            )
+        # Calculate precision, recall, F1 for test set
+        precision_test = precision_score(y_test, result_dict[m]['test'], average='weighted')
+        recall_test = recall_score(y_test, result_dict[m]['test'], average='weighted')
+        f1_test = f1_score(y_test, result_dict[m]['test'], average='weighted')
+        
+        # For train set
+        precision_train = precision_score(y_train, result_dict[m]['train'], average='weighted')
+        recall_train = recall_score(y_train, result_dict[m]['train'], average='weighted')
+        f1_train = f1_score(y_train, result_dict[m]['train'], average='weighted')
+        
+        # For latest month prediction
+        precision_pred = precision_score(pred_data_y, result_dict[m]['latest_month'], average='weighted')
+        recall_pred = recall_score(pred_data_y, result_dict[m]['latest_month'], average='binary')
+        f1_pred = f1_score(pred_data_y, result_dict[m]['latest_month'], average='weighted')
+        
+        
+        st.markdown(f"**{m}**:")
+        st.markdown(f"""
+        - Accuracy: {pred_acc*100:.2f}%
+        - Precision: {precision_pred*100:.2f}%
+        - Recall: {recall_pred*100:.2f}%
+        - F1 Score: {f1_pred*100:.2f}%
+        """)
+        
+        # Confusion Matrix for latest month prediction
+        cm = confusion_matrix(pred_data_y, result_dict[m]['latest_month'])
+        # st.markdown(f"**Confusion Matrix**:")
+        
+        # Create a pandas DataFrame for better readability
+        cm_df = pd.DataFrame(
+            cm,
+            index=[f'True {label}' for label in [-1, 1]],
+            columns=[f'Pred {label}' for label in [-1, 1]]
+        )
 
-            fig, ax = plt.subplots(figsize=(4, 4))
-            ax.set_title(f"{m} Confusion Matrix")
-            ConfusionMatrixDisplay.from_predictions(result_dict[m]['latest_month'], pred_data_y, display_labels=[-1, 1], ax=ax)
-            st.pyplot(fig, width=450)
-            
-            st.markdown("\n")
+        fig, ax = plt.subplots(figsize=(4, 4))
+        ax.set_title(f"{m} Confusion Matrix")
+        ConfusionMatrixDisplay.from_predictions(result_dict[m]['latest_month'], pred_data_y, display_labels=[-1, 1], ax=ax)
+        st.pyplot(fig, width=450)
+        
+        st.markdown("\n")
 
     st.divider()
-
-    # Show data summary
-    st.subheader(f"{ticker} — Latest data")
-    st.dataframe(data[['Close', 'MACD', 'MACD_SIGNAL', 'MACD_HIST', 'SMA20', 'EMA60', 'RSI', 'BB_Low', 'BB_Mid', 'BB_High', 'ATR', 'ADX', 'OBV']].tail(10))
-
-    # Plots
-    st.subheader("Price and Technical Indicators")
-    fig, ax = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
-    ax[0].plot(data['Close'], label='Close')
-    if "SMA20" in data:
-        ax[0].plot(data['SMA20'], label='SMA20')
-    if "EMA60" in data:
-        ax[0].plot(data['EMA60'], label='EMA60')
-    ax[0].set_ylabel("Price")
-    ax[0].legend(loc='best')
-    ax[0].set_title(f"{ticker} Moving Averages")
-    ax[1].plot(data['Daily_Return'], label='Daily_Return', color='tab:orange')
-    ax[1].set_ylabel("Daily_Return")
-    ax[1].legend(loc='best')
-
-    fig.tight_layout()
-    st.pyplot(fig)
-
-    # RSI plot
-    fig_rsi, ax_rsi = plt.subplots(figsize=(10, 3))
-    ax_rsi.plot(data.index, data["RSI14"], label="RSI14", color="purple")
-    ax_rsi.axhline(70, color="red", linestyle="--", linewidth=0.7)
-    ax_rsi.axhline(30, color="green", linestyle="--", linewidth=0.7)
-    ax_rsi.set_title(f"{ticker} RSI (14)")
-    ax_rsi.set_ylabel("RSI")
-    ax_rsi.set_xlabel("Date")
-    ax_rsi.legend(loc="best")
-    fig_rsi.tight_layout()
-    st.pyplot(fig_rsi)
-
-    # MACD plot (Close separated from MACD lines via a broken y-axis)
-    # MACD + Signal + Histogram merged into one bottom panel, Close on top broken y-axis
-    macd_series = pd.concat([data.get("MACD", pd.Series(dtype=float)),
-                             data.get("MACD_SIGNAL", pd.Series(dtype=float))]).dropna()
-    if macd_series.empty:
-        macd_min, macd_max = -1.0, 1.0
-    else:
-        macd_min, macd_max = macd_series.min(), macd_series.max()
-
-    close_min, close_max = data["Close"].min(), data["Close"].max()
-    macd_range = macd_max - macd_min if (macd_max - macd_min) != 0 else 1.0
-    close_range = close_max - close_min if (close_max - close_min) != 0 else 1.0
-
-    macd_pad = max(macd_range * 0.1, 1e-6)
-    close_pad = max(close_range * 0.02, 1e-3)
-
-    tentative_macd_top = macd_max + macd_pad
-    tentative_close_bottom = close_min - close_pad
-
-    # Try 15$ rule if feasible, otherwise fallback to adaptive padding and enforce a small gap
-    if (close_min - 2) - (macd_max + 2) > 0:
-        macd_top = macd_max + 2
-        close_bottom = close_min - 2
-    else:
-        macd_top = tentative_macd_top
-        close_bottom = tentative_close_bottom
-        if close_bottom <= macd_top:
-            # enforce a small positive gap between macd_top and close_bottom
-            close_bottom = macd_top + max(close_range * 0.02, 1.0)
-
-    # build figure with 2 stacked rows: Close (zoomed, broken axis) and merged MACD+hist
-    fig_macd = plt.figure(constrained_layout=True, figsize=(10, 5))
-    gs = fig_macd.add_gridspec(2, 1, height_ratios=[1.6, 1.0])
-    ax_close = fig_macd.add_subplot(gs[0, 0])
-    ax_macd = fig_macd.add_subplot(gs[1, 0], sharex=ax_close)
-
-    # top: Close (zoomed region)
-    ax_close.plot(data.index, data["Close"], label="Close", color="black", alpha=0.9)
-    ax_close.set_ylim(close_bottom, close_max + close_pad)
-    ax_close.set_ylabel("Price")
-    ax_close.legend(loc="upper left")
-    plt.setp(ax_close.get_xticklabels(), visible=False)
-
-    # bottom: merged MACD lines + histogram
-    hist_vals = data.get("MACD_HIST", data.get("MACD", 0) - data.get("MACD_SIGNAL", 0))
-    # bars (histogram)
-    ax_macd.bar(data.index, hist_vals, color=np.where(hist_vals >= 0, "g", "r"), width=1, alpha=0.6, label="MACD Hist")
-    # lines
-    ax_macd.plot(data.index, data.get("MACD", pd.Series(dtype=float)), label="MACD", color="blue")
-    ax_macd.plot(data.index, data.get("MACD_SIGNAL", pd.Series(dtype=float)), label="Signal", color="orange")
-    ax_macd.set_ylim(macd_min - macd_pad, macd_top)
-    ax_macd.set_ylabel("MACD")
-    ax_macd.legend(loc="lower left")
-
-    # draw diagonal break markers between ax_close and ax_macd (visual break)
-    d = .015  # size of diagonal lines in axes coords
-    kwargs_close = dict(transform=ax_close.transAxes, color='k', clip_on=False)
-    ax_close.plot((-d, +d), (-d, +d), **kwargs_close)
-    ax_close.plot((1 - d, 1 + d), (-d, +d), **kwargs_close)
-    kwargs_macd = dict(transform=ax_macd.transAxes, color='k', clip_on=False)
-    ax_macd.plot((-d, +d), (1 - d, 1 + d), **kwargs_macd)
-    ax_macd.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs_macd)
-
-    fig_macd.suptitle(f"{ticker} MACD")
-    st.pyplot(fig_macd)
-
-    # Bollinger Bands plot (overlay on price)
-    fig_bb, ax_bb = plt.subplots(figsize=(10, 4))
-    ax_bb.plot(data.index, data["Close"], label="Close", color="black")
-    ax_bb.plot(data.index, data["BB_Mid"], label="BB Middle (SMA20)", color="blue", linewidth=0.9)
-    ax_bb.plot(data.index, data["BB_High"], label="BB Upper", color="red", linestyle="--", linewidth=0.8)
-    ax_bb.plot(data.index, data["BB_Low"], label="BB Lower", color="green", linestyle="--", linewidth=0.8)
-    ax_bb.fill_between(data.index, data["BB_Low"], data["BB_High"], color="gray", alpha=0.1)
-    ax_bb.set_title(f"{ticker} Bollinger Bands (20)")
-    ax_bb.set_xlabel("Date")
-    ax_bb.set_ylabel("Price")
-    ax_bb.legend(loc="best")
-    fig_bb.tight_layout()
-    st.pyplot(fig_bb)
-
-    # SMA20-SMA60 cross strategy vs Buy & Holds
-    # Create SMA20 if not present
-    if "SMA20" not in data:
-        data["SMA20"] = data["Close"].rolling(window=20, min_periods=1).mean()
-
-    sig = pd.Series(0, index=data.index)
-    sig[(data["SMA20"].shift(1) < data["SMA60"].shift(1)) & (data["SMA20"] >= data["SMA60"])] = 1
-    sig[(data["SMA20"].shift(1) > data["SMA60"].shift(1)) & (data["SMA20"] <= data["SMA60"])] = -1
-    position = sig.replace(to_replace=0, method="ffill").clip(-1, 1)
-
-    ret = data["Close"].pct_change()
-    strat_ret = position.shift(1) * ret
-    cum_eq = (1 + strat_ret.fillna(0)).cumprod()
-    buyhold = (1 + ret.fillna(0)).cumprod()
-
-    fig_cross, ax_cross = plt.subplots(figsize=(10, 4))
-    ax_cross.plot(cum_eq.index, cum_eq, label="SMA20-60 Strat")
-    ax_cross.plot(buyhold.index, buyhold, label="Buy & Hold", linestyle="--")
-    ax_cross.legend()
-    ax_cross.set_title(f"{ticker} SMA20-SMA60 Cross Strategy vs Buy&Hold")
-    ax_cross.set_xlabel("Date")
-    ax_cross.set_ylabel("Equity Curve")
-    fig_cross.tight_layout()
-    st.pyplot(fig_cross)
 
     # ARIMA Forecast
     st.subheader(f"ARIMA Forecast of {ticker}")
