@@ -125,22 +125,14 @@ def prepare_stock_data(ticker: str, start_date, end_date):
     except Exception as e:
         return None, str(e)
 
-def profit_loss_calculation(data, end_date): 
-    one_month_ago = end_date + relativedelta(months=-1)
-    one_month_df = data.loc[one_month_ago:]
-    first_day_price = one_month_df['Close'][0]
-    last_day_price = one_month_df['Close'][-1]
-    profit_loss_pct = (last_day_price / first_day_price - 1)*100
-    return profit_loss_pct
-
 @st.cache_data(ttl=36000)
 def top_model_selection(data, end_date): 
     tmr_data = data.tail(1)
     data = data.dropna()
 
-    one_month_ago = end_date + relativedelta(months=-1)
-    pred_month = data.loc[one_month_ago:]
-    training = data.loc[:one_month_ago]
+    three_months_ago = end_date + relativedelta(months=-3)
+    pred_month = data.loc[three_months_ago:]
+    training = data.loc[:three_months_ago]
 
     #feature selection 
     x_col = ['prev_close', 'prev_open', 'SMA5', 'SMA20', 'EMA60', 'RSI', 'MACD', 'MACD_SIGNAL', "MACD_HIST", "BB_Low", "BB_Mid", "BB_High", "ATR", "ADX", "OBV", 'STOCH_K', 'STOCH_D', 'CCI_14', 'CCI_20',
@@ -231,7 +223,29 @@ def top_model_selection(data, end_date):
     # Sort by test_acc descending
     qualifying_models.sort(key=lambda x: x[1], reverse=True)
 
-    return qualifying_models, result_dict, y_test, y_train, pred_data_y
+    return qualifying_models, result_dict, y_test, y_train, pred_data_y, pred_month
+
+def profit_loss_calculation(pred_month, qualifying_models, result_dict): 
+    top_model = qualifying_models[0][0]
+    pred_month['signal'] = result_dict[top_model]['latest_month']
+    p_df = pred_month[['Close','signal']]
+    p_df['prev_signal'] = p_df['signal'].shift(1)
+    r_df = p_df.loc[p_df['signal'] != p_df['prev_signal']]
+    r_df['prev_close'] = r_df['Close'].shift(1)
+    r_df['return'] = r_df['Close']/r_df['prev_close'] - 1
+    profit_loss_pct = round(r_df['return'].sum()*100, 2)
+
+
+    # Step 1: create p_df = [['Close', 'signal']] -> signal = result_dict[model]['latest_month'] from top_model_selection
+    # Step 2: create 'prev_signal' column by shifting 'singal column (1)
+    # Step 3: create r_df = p_df.loc[p_df['signal'] != p_df['prev_signal']] (1->-1 sell signal, -1->1 buy signal)
+    # Step 4: create 'prev_close' column in r_df
+    # Step 5: create r_df['ret'] = r_df['Close']/r_df['prev_close'] - 1 (p/l)
+    # Step 6: r_df['ret'].sum() -> overall p/l 
+    # Step 7: convert to % 
+    # Conclusion: if following this recommendations everyday for the past 3 months, you would end up with this p/l % 
+
+    return profit_loss_pct
 
 st.set_page_config(
     page_title="📊 Stock Prediction App",
@@ -294,7 +308,7 @@ START_default = pd.to_datetime("2010-01-01").date()
 START = st.sidebar.date_input("Start date", value=START_default)
 END = st.sidebar.date_input("End date", value=date.today())
 
-# show Load button (remove the Back button)
+# show Load button and Back button
 col1, col2 = st.sidebar.columns(2)
 with col1:
     if st.button("Load Data", use_container_width=True):
@@ -316,7 +330,17 @@ if st.session_state.page == "landing":
     st.title("📊 Stock Prediction App")
     st.markdown("Enter a ticker in the sidebar and click **Load Data** button for Stock Prediction Results.")
     st.image("arima_predictive_modeling/ticker.png", caption="How to search for tickers", width='content')
-    st.markdown("⚠️ Please note that **Yahoo Finance** may have some issues leading to ValueError. If so, please refresh the page and try again.")
+    st.markdown("""
+    The **label** that tells us the future trend:
+    - If the 5-day Simple Moving Average (SMA5) is **above** the 20-day SMA (SMA20) → this is a classic **golden cross**, a bullish signal → label = **1 (Up/Buy)**
+    - If SMA5 is **below** SMA20 → bearish signal → label = **-1 (Down/Sell)**
+    - We then **shift this label forward by 1 day** so that today's data predicts **tomorrow's** trend.
+
+    The **Features (Input Signals)** that helped to predict the **label**: 
+    - Stock Prices and various technical indicators. We used feature engineering to select the one with correlations. 
+    """)
+    st.markdown("<span style='color:red'>⚠️ Please note that **Yahoo Finance** may have some issues leading to ValueError. If so, please refresh the page and try again.</span>",
+    unsafe_allow_html=True)
 
     # US, Korea (Samsung), China (Tencent), France (LVMH), Japan (Toyota)
     top_companies_ticker = ['AAPL', 'GOOGL', '005930.KS', '0700.HK', 'MC.PA', '7203.T']
@@ -335,10 +359,10 @@ if st.session_state.page == "landing":
             company_name = company_info.info.get('shortName', 'N/A')
             
             # Get ML models
-            qualifying_models, _, _, _, _ = top_model_selection(data, END)
+            qualifying_models, result_dict, _, _, _, pred_month = top_model_selection(data, END)
             
             # Get P&L
-            profit_loss_pct = profit_loss_calculation(data, END)
+            profit_loss_pct = profit_loss_calculation(pred_month, qualifying_models, result_dict)
             
             # Store all in one dictionary
             company_data_all[ticker_symbol] = {
@@ -362,7 +386,7 @@ if st.session_state.page == "landing":
         "Tickers": list(company_data_all.keys()),
         "Company": [company_data_all[tick]['name'] for tick in top_companies_ticker],
         "ML Prediction": [company_data_all[tick]['prediction'] for tick in top_companies_ticker],
-        "Past 1 Month P/L (%)": [f"{company_data_all[tick]['profit_loss_pct']:.2f}%" for tick in top_companies_ticker]
+        "Past 1 Month P/L (%)": [f"{company_data_all[tick]['profit_loss_pct']}%" for tick in top_companies_ticker]
     })
     st.dataframe(stocks_df.set_index("Tickers"), use_container_width=True, hide_index=False)
 
@@ -421,7 +445,7 @@ elif st.session_state.page == "analysis":
     st.subheader("Model Recommendations")
     st.markdown("📢 This section will only show ML Predictions that have accuracy greater than 80% and generalization gap less than 5%.")
 
-    qualifying_models, result_dict, y_test, y_train, pred_data_y = top_model_selection(data, END)
+    qualifying_models, result_dict, y_test, y_train, pred_data_y, _ = top_model_selection(data, END)
     # Display predictions in sorted order
     for m, test_acc, _ in qualifying_models:
         st.markdown(f"**{m} Prediction**: {result_dict[m]['status']}")
