@@ -28,6 +28,8 @@ def prepare_stock_data(ticker: str, start_date, end_date):
         if isinstance(data.columns, pd.MultiIndex):
             data.columns = data.columns.droplevel(1)
         
+        last_day = str(data.index[-1])
+        last_date = datetime.strptime(last_day, "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d")
         if data.empty:
             return None, f"No data found for ticker {ticker}"
         
@@ -120,10 +122,10 @@ def prepare_stock_data(ticker: str, start_date, end_date):
         data.loc[data['SMA5'] <= data['SMA20'], 'label'] = -1
         data['label'] = data['label'].shift(periods=-1)
 
-        return data, None
+        return data, last_date, None
     
     except Exception as e:
-        return None, str(e)
+        return None, None, str(e)
 
 @st.cache_data(ttl=36000)
 def top_model_selection(data, end_date): 
@@ -149,67 +151,21 @@ def top_model_selection(data, end_date):
     pred_data_y = pred_month[y_col]
 
     result_dict = {}
-
+    model_name_list = [('Decision Tree',DecisionTreeClassifier(max_depth=3)),
+                    ('KNN',KNeighborsClassifier(n_neighbors=10)),
+                    ('Logistic Regression',LogisticRegression()),
+                    ('Random Forest',RandomForestClassifier(n_estimators=30,max_depth=5)),
+                    ('SVM',SVC()),
+                    ('GaussianNB',GaussianNB())]
     ## ML Models 
-    #Decision Tree
-    result_dict['Decision Tree'] = {}
-    clf = DecisionTreeClassifier(max_depth=3)
-    clf = clf.fit(X_train, y_train)
-    result_dict['Decision Tree']['test'] = clf.predict(X_test)
-    result_dict['Decision Tree']['train'] = clf.predict(X_train)
-    result_dict['Decision Tree']['tmr'] = clf.predict(tmr_data[x_col])
-    result_dict['Decision Tree']['latest_month'] = clf.predict(pred_data_x)
-    result_dict['Decision Tree']['status'] = "Buy 📈" if result_dict['Decision Tree']['tmr'] == 1 else "Sell 📉"
-
-    #KNN
-    result_dict['KNN'] = {}
-    knn = KNeighborsClassifier(n_neighbors=10)
-    knn.fit(X_train, y_train)
-    result_dict['KNN']['test'] = knn.predict(X_test)
-    result_dict['KNN']['train'] = knn.predict(X_train)
-    result_dict['KNN']['tmr'] = knn.predict(tmr_data[x_col])
-    result_dict['KNN']['latest_month'] = knn.predict(pred_data_x)
-    result_dict['KNN']['status'] = "Buy 📈" if result_dict['KNN']['tmr'] == 1 else "Sell 📉"
-
-    #Logistic Regression
-    result_dict['Logistic Regression'] = {}
-    log_reg = LogisticRegression()
-    log_reg.fit(X_train, y_train)
-    result_dict['Logistic Regression']['test'] = log_reg.predict(X_test)
-    result_dict['Logistic Regression']['train'] = log_reg.predict(X_train)
-    result_dict['Logistic Regression']['tmr'] = log_reg.predict(tmr_data[x_col])
-    result_dict['Logistic Regression']['latest_month'] = log_reg.predict(pred_data_x)  # Remove [x_col]
-    result_dict['Logistic Regression']['status'] = "Buy 📈" if result_dict['Logistic Regression']['tmr'][0] == 1 else "Sell 📉"
-
-    #Random Forest
-    result_dict['Random Forest'] = {}
-    random = RandomForestClassifier(n_estimators=30,max_depth=5)
-    random.fit(X_train, y_train)
-    result_dict['Random Forest']['test'] = random.predict(X_test)
-    result_dict['Random Forest']['train'] = random.predict(X_train)
-    result_dict['Random Forest']['tmr'] = random.predict(tmr_data[x_col])
-    result_dict['Random Forest']['latest_month'] = random.predict(pred_data_x)
-    result_dict['Random Forest']['status'] = "Buy 📈" if result_dict['Random Forest']['tmr'] == 1 else "Sell 📉"
-
-    #SVM
-    result_dict['SVM'] = {}
-    svm = SVC()
-    svm.fit(X_train, y_train)
-    result_dict['SVM']['test'] = svm.predict(X_test)
-    result_dict['SVM']['train'] = svm.predict(X_train)
-    result_dict['SVM']['tmr'] = svm.predict(tmr_data[x_col])
-    result_dict['SVM']['latest_month'] = svm.predict(pred_data_x)
-    result_dict['SVM']['status'] = "Buy 📈" if result_dict['SVM']['tmr'] == 1 else "Sell 📉"
-
-    #GaussianNB
-    result_dict['GaussianNB'] = {}
-    gnb = GaussianNB()
-    gnb.fit(X_train, y_train)
-    result_dict['GaussianNB']['test'] = svm.predict(X_test)
-    result_dict['GaussianNB']['train'] = svm.predict(X_train)
-    result_dict['GaussianNB']['tmr'] = svm.predict(tmr_data[x_col])
-    result_dict['GaussianNB']['latest_month'] = svm.predict(pred_data_x)
-    result_dict['GaussianNB']['status'] = "Buy 📈" if result_dict['GaussianNB']['tmr'] == 1 else "Sell 📉"
+    for mn, clf in model_name_list:
+        result_dict[mn] = {}
+        clf = clf.fit(X_train, y_train)
+        result_dict[mn]['test'] = clf.predict(X_test)
+        result_dict[mn]['train'] = clf.predict(X_train)
+        result_dict[mn]['tmr'] = clf.predict(tmr_data[x_col])
+        result_dict[mn]['latest_month'] = clf.predict(pred_data_x)
+        result_dict[mn]['status'] = "Buy 📈" if result_dict[mn]['tmr'] == 1 else "Sell 📉"
 
     # Collect qualifying models and sort by test accuracy descending
     qualifying_models = []
@@ -226,26 +182,23 @@ def top_model_selection(data, end_date):
     return qualifying_models, result_dict, y_test, y_train, pred_data_y, pred_month
 
 def profit_loss_calculation(pred_month, qualifying_models, result_dict): 
-    top_model = qualifying_models[0][0]
-    pred_month['signal'] = result_dict[top_model]['latest_month']
-    p_df = pred_month[['Close','signal']]
-    p_df['prev_signal'] = p_df['signal'].shift(1)
-    r_df = p_df.loc[p_df['signal'] != p_df['prev_signal']]
-    r_df['prev_close'] = r_df['Close'].shift(1)
-    r_df['return'] = r_df['Close']/r_df['prev_close'] - 1
-    profit_loss_pct = round(r_df['return'].sum()*100, 2)
+    profit_loss = {}
 
+    top_models = []
+    for model in qualifying_models: 
+        top_models.append(model[0])
 
-    # Step 1: create p_df = [['Close', 'signal']] -> signal = result_dict[model]['latest_month'] from top_model_selection
-    # Step 2: create 'prev_signal' column by shifting 'singal column (1)
-    # Step 3: create r_df = p_df.loc[p_df['signal'] != p_df['prev_signal']] (1->-1 sell signal, -1->1 buy signal)
-    # Step 4: create 'prev_close' column in r_df
-    # Step 5: create r_df['ret'] = r_df['Close']/r_df['prev_close'] - 1 (p/l)
-    # Step 6: r_df['ret'].sum() -> overall p/l 
-    # Step 7: convert to % 
-    # Conclusion: if following this recommendations everyday for the past 3 months, you would end up with this p/l % 
+    for top_model in top_models: 
+        pred_month['signal'] = result_dict[top_model]['latest_month']
+        p_df = pred_month[['Close','signal']]
+        p_df['prev_signal'] = p_df['signal'].shift(1)
+        r_df = p_df.loc[p_df['signal'] != p_df['prev_signal']]
+        r_df['prev_close'] = r_df['Close'].shift(1)
+        r_df['return'] = r_df['Close']/r_df['prev_close'] - 1
+        profit_loss_pct = round(r_df['return'].sum()*100, 2)
+        profit_loss[top_model] = profit_loss_pct
 
-    return profit_loss_pct
+    return profit_loss
 
 st.set_page_config(
     page_title="📊 Stock Prediction App",
@@ -351,8 +304,8 @@ if st.session_state.page == "landing":
     # Combine all data into one dictionary
     company_data_all = {}
     for ticker_symbol in top_companies_ticker:
-        data, error = prepare_stock_data(ticker_symbol, START, END)
-        
+        data, last_date, error = prepare_stock_data(ticker_symbol, START, END)
+
         if data is not None:
             # Get company name
             company_info = yf.Ticker(ticker_symbol)
@@ -362,21 +315,26 @@ if st.session_state.page == "landing":
             qualifying_models, result_dict, _, _, _, pred_month = top_model_selection(data, END)
             
             # Get P&L
-            profit_loss_pct = profit_loss_calculation(pred_month, qualifying_models, result_dict)
+            profit_loss = profit_loss_calculation(pred_month, qualifying_models, result_dict)
+            
+            # Get only top 1 model's P&L for landing page
+            top_model_pl = list(profit_loss.values())[0] if profit_loss else 0
             
             # Store all in one dictionary
             company_data_all[ticker_symbol] = {
                 'name': company_name,
                 'qualifying_models': qualifying_models,
-                'profit_loss_pct': profit_loss_pct,
-                'prediction': qualifying_models[0][2] if qualifying_models else "No qualifying models"
+                'profit_loss_pct': top_model_pl,
+                'prediction': qualifying_models[0][2] if qualifying_models else "No qualifying models",
+                'last_date': last_date
             }
         else:
             company_data_all[ticker_symbol] = {
                 'name': 'N/A',
                 'qualifying_models': [],
                 'profit_loss_pct': 0,
-                'prediction': "Error loading data"
+                'prediction': "Error loading data",
+                'last_date': "N/A"
             }
     
     # Result Table 
@@ -386,7 +344,8 @@ if st.session_state.page == "landing":
         "Tickers": list(company_data_all.keys()),
         "Company": [company_data_all[tick]['name'] for tick in top_companies_ticker],
         "ML Prediction": [company_data_all[tick]['prediction'] for tick in top_companies_ticker],
-        "Past 1 Month P/L (%)": [f"{company_data_all[tick]['profit_loss_pct']}%" for tick in top_companies_ticker]
+        "Past 3 Months P/L (%)": [f"{company_data_all[tick]['profit_loss_pct']}%" for tick in top_companies_ticker],
+        "Data Retrieved Last Day": [company_data_all[tick]['last_date'] for tick in top_companies_ticker]
     })
     st.dataframe(stocks_df.set_index("Tickers"), use_container_width=True, hide_index=False)
 
@@ -434,7 +393,7 @@ elif st.session_state.page == "analysis":
         st.stop()
     
     # Prepare data
-    data, error = prepare_stock_data(ticker, START, END)
+    data, last_date, error = prepare_stock_data(ticker, START, END)
     
     if error:
         st.error(f"Error processing ticker {ticker}: {error}")
@@ -445,7 +404,7 @@ elif st.session_state.page == "analysis":
     st.subheader("Model Recommendations")
     st.markdown("📢 This section will only show ML Predictions that have accuracy greater than 80% and generalization gap less than 5%.")
 
-    qualifying_models, result_dict, y_test, y_train, pred_data_y, _ = top_model_selection(data, END)
+    qualifying_models, result_dict, y_test, y_train, pred_data_y, pred_month = top_model_selection(data, END)
     # Display predictions in sorted order
     for m, test_acc, _ in qualifying_models:
         st.markdown(f"**{m} Prediction**: {result_dict[m]['status']}")
@@ -469,119 +428,69 @@ elif st.session_state.page == "analysis":
             else:
                 st.write(f"{m} Accuracy: {test_acc*100:.2f}%")
                 st.write(f"{m} Train Set Accuracy: {train_acc*100:.2f}%")
-        
+
     st.divider()
+
+    # Profit and Loss
+    st.subheader("Profit and Loss")
+    st.markdown("This section shows how much profit or loss (%) you would have with the ML Model's prediction in above section.")
+
+    profit_loss = profit_loss_calculation(pred_month, qualifying_models, result_dict)
+    
+    # Display all qualifying models' P/L
+    for model_name, pl_pct in profit_loss.items():
+        st.markdown(f"**{model_name}**: {pl_pct}%")
+
+    st.divider()
+
+
+    # Reliability (Confusion Matrix, Recall, Precision, Accuracy)
     st.subheader("Model Reliability")
 
     # Evaluation
-    # with st.expander("Click to see the evaluation details"): 이걸 쓸지 말지 모르겠음 
-    for m in qualifying_names: 
-        # Accuracy
-        pred_acc = accuracy_score(pred_data_y, result_dict[m]['latest_month'])
+    with st.expander("Click to see the evaluation details"): 
+        for m in qualifying_names: 
+            # Accuracy
+            pred_acc = accuracy_score(pred_data_y, result_dict[m]['latest_month'])
 
-        # Calculate precision, recall, F1 for test set
-        precision_test = precision_score(y_test, result_dict[m]['test'], average='weighted')
-        recall_test = recall_score(y_test, result_dict[m]['test'], average='weighted')
-        f1_test = f1_score(y_test, result_dict[m]['test'], average='weighted')
-        
-        # For train set
-        precision_train = precision_score(y_train, result_dict[m]['train'], average='weighted')
-        recall_train = recall_score(y_train, result_dict[m]['train'], average='weighted')
-        f1_train = f1_score(y_train, result_dict[m]['train'], average='weighted')
-        
-        # For latest month prediction
-        precision_pred = precision_score(pred_data_y, result_dict[m]['latest_month'], average='weighted')
-        recall_pred = recall_score(pred_data_y, result_dict[m]['latest_month'], average='binary')
-        f1_pred = f1_score(pred_data_y, result_dict[m]['latest_month'], average='weighted')
-        
-        
-        st.markdown(f"**{m}**:")
-        st.markdown(f"""
-        - Accuracy: {pred_acc*100:.2f}%
-        - Precision: {precision_pred*100:.2f}%
-        - Recall: {recall_pred*100:.2f}%
-        - F1 Score: {f1_pred*100:.2f}%
-        """)
-        
-        # Confusion Matrix for latest month prediction
-        cm = confusion_matrix(pred_data_y, result_dict[m]['latest_month'])
-        # st.markdown(f"**Confusion Matrix**:")
-        
-        # Create a pandas DataFrame for better readability
-        cm_df = pd.DataFrame(
-            cm,
-            index=[f'True {label}' for label in [-1, 1]],
-            columns=[f'Pred {label}' for label in [-1, 1]]
-        )
+            # Calculate precision, recall, F1 for test set
+            precision_test = precision_score(y_test, result_dict[m]['test'], average='weighted')
+            recall_test = recall_score(y_test, result_dict[m]['test'], average='weighted')
+            f1_test = f1_score(y_test, result_dict[m]['test'], average='weighted')
+            
+            # For train set
+            precision_train = precision_score(y_train, result_dict[m]['train'], average='weighted')
+            recall_train = recall_score(y_train, result_dict[m]['train'], average='weighted')
+            f1_train = f1_score(y_train, result_dict[m]['train'], average='weighted')
+            
+            # For latest month prediction
+            precision_pred = precision_score(pred_data_y, result_dict[m]['latest_month'], average='weighted')
+            recall_pred = recall_score(pred_data_y, result_dict[m]['latest_month'], average='binary')
+            f1_pred = f1_score(pred_data_y, result_dict[m]['latest_month'], average='weighted')
+            
+            
+            st.markdown(f"**{m}**:")
+            st.markdown(f"""
+            - Accuracy: {pred_acc*100:.2f}%
+            - Precision: {precision_pred*100:.2f}%
+            - Recall: {recall_pred*100:.2f}%
+            - F1 Score: {f1_pred*100:.2f}%
+            """)
+            
+            # Confusion Matrix for latest month prediction
+            cm = confusion_matrix(pred_data_y, result_dict[m]['latest_month'])
+            # st.markdown(f"**Confusion Matrix**:")
+            
+            # Create a pandas DataFrame for better readability
+            cm_df = pd.DataFrame(
+                cm,
+                index=[f'True {label}' for label in [-1, 1]],
+                columns=[f'Pred {label}' for label in [-1, 1]]
+            )
 
-        fig, ax = plt.subplots(figsize=(4, 4))
-        ax.set_title(f"{m} Confusion Matrix")
-        ConfusionMatrixDisplay.from_predictions(result_dict[m]['latest_month'], pred_data_y, display_labels=[-1, 1], ax=ax)
-        st.pyplot(fig, width=450)
-        
-        st.markdown("\n")
-
-    st.divider()
-
-    # ARIMA Forecast
-    st.subheader(f"ARIMA Forecast of {ticker}")
-    series = data['Close']
-
-    best_p, best_d, best_q = 5,5,5
-
-    # ARIMA 
-    model = ARIMA(series, order=(best_p, best_d, best_q))
-    model_fit = model.fit()
-
-    # get forecast (no confidence intervals)
-    try:
-        forecast_res = model_fit.get_forecast(steps=5)
-        forecast_mean = forecast_res.predicted_mean
-    except Exception:
-        # fallback to simple forecast array if get_forecast isn't available
-        forecast_mean = model_fit.forecast(steps=5)
-
-    # build future dates (5 business days after last date)
-    last_date = series.index[-1]
-    future_index = pd.bdate_range(start=last_date + pd.Timedelta(days=1), periods=len(forecast_mean))
-
-    # create series with the new index
-    forecast_series = pd.Series(forecast_mean.values, index=future_index)
-
-    # extended series for plotting continuity
-    extended = pd.concat([series, forecast_series])
-
-    # Plot only the latest 1 month of historical Close + next 5 business days forecast
-    one_month_ago = series.index[-1] - pd.Timedelta(days=30)
-    start_plot = max(one_month_ago, series.index[0])
-    hist_plot = series.loc[start_plot:series.index[-1]]
-
-    # create a combined series so the line is continuous between last historical point and first forecast point
-    combined = pd.concat([hist_plot, forecast_series]).sort_index()
-
-    fig_arima, ax_arima = plt.subplots(figsize=(10, 4))
-    # draw continuous line (connects across non-trading days)
-    ax_arima.plot(combined.index, combined.values, label='Close (connected)', color='black', alpha=0.6)
-    # emphasize recent historical region
-    ax_arima.plot(hist_plot.index, hist_plot.values, label='Close (last 1 month)', color='black', linewidth=1.5)
-    # highlight forecast region
-    ax_arima.plot(forecast_series.index, forecast_series.values, label='ARIMA Forecast (5 days)', color='red', linestyle='--', linewidth=1.5)
-
-    # set x-axis to show from start_plot through last forecast date
-    ax_arima.set_xlim(start_plot, future_index[-1])
-    ax_arima.legend()
-    ax_arima.set_title(f"{ticker} — Last 1 month Close and 5-day ARIMA Forecast")
-    ax_arima.set_xlabel("Date")
-    ax_arima.set_ylabel("Price")
-    fig_arima.autofmt_xdate()
-    fig_arima.tight_layout()
-    st.pyplot(fig_arima)
-
-    # Show the 5-day forecast values below the chart
-    forecast_df = pd.DataFrame({
-        "Date": forecast_series.index.date,
-        "Forecast Price": forecast_series.values
-    })
-    forecast_df["Forecast Price"] = forecast_df["Forecast Price"].round(2)
-    st.subheader("5-day ARIMA Forecast")
-    st.dataframe(forecast_df.set_index("Date"), use_container_width=True, hide_index=False)
+            fig, ax = plt.subplots(figsize=(4, 4))
+            ax.set_title(f"{m} Confusion Matrix")
+            ConfusionMatrixDisplay.from_predictions(result_dict[m]['latest_month'], pred_data_y, display_labels=[-1, 1], ax=ax)
+            st.pyplot(fig, width=450)
+            
+            st.markdown("\n")
