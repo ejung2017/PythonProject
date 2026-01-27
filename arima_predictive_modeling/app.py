@@ -281,8 +281,18 @@ if "page" not in st.session_state:
 if st.session_state.page == "landing":
     github_url = "https://github.com/ejung2017/PythonProject/tree/main"
     st.title("📊 Stock Prediction App")
-    st.markdown("Enter a ticker in the sidebar and click **Load Data** button for Stock Prediction Results.")
-    st.image("arima_predictive_modeling/ticker.png", caption="How to search for tickers", width='content')
+    st.markdown("""
+                Welcome! 😇 \n
+                This app will give you advices on whether to buy/sell a stock. 
+                """)
+    st.markdown("Enter a ticker in the sidebar and click **Load Data** button for the top prediction results.")
+    with st.expander("How to find a company's ticker ❓"):
+        st.markdown("""
+                    To find a ticker on financial websites like Yahoo Finance, search for the company name. 
+                    Alternatively, use a search engine to look up the company name followed by the word 'ticker.' 
+                    In the U.S., tickers generally consist of one to four characters; however, non-U.S. stocks often use different structures or suffixes to indicate the exchange, such as .KS for South Korea.
+                    """)
+        st.image("arima_predictive_modeling/ticker.png", width='content')
     st.markdown("""
     The **label** that tells us the future trend:
     - If the 5-day Simple Moving Average (SMA5) is **above** the 20-day SMA (SMA20) → this is a classic **golden cross**, a bullish signal → label = **1 (Up/Buy)**
@@ -290,7 +300,7 @@ if st.session_state.page == "landing":
     - We then **shift this label forward by 1 day** so that today's data predicts **tomorrow's** trend.
 
     The **Features (Input Signals)** that helped to predict the **label**: 
-    - Stock Prices and various technical indicators. We used feature engineering to select the one with correlations. 
+    - Stock prices and various technical indicators. We used feature engineering to select the most valuable ones. 
     """)
     st.markdown("<span style='color:red'>⚠️ Please note that **Yahoo Finance** may have some issues leading to ValueError. If so, please refresh the page and try again.</span>",
     unsafe_allow_html=True)
@@ -340,18 +350,19 @@ if st.session_state.page == "landing":
     # Result Table 
     st.divider()
     st.subheader("Top Companies Predictions")
+    st.markdown("Here's a quick glimpse of what will be in the next page 🤓")
     stocks_df = pd.DataFrame({
         "Tickers": list(company_data_all.keys()),
         "Company": [company_data_all[tick]['name'] for tick in top_companies_ticker],
         "ML Prediction": [company_data_all[tick]['prediction'] for tick in top_companies_ticker],
         "Past 3 Months P/L (%)": [f"{company_data_all[tick]['profit_loss_pct']}%" for tick in top_companies_ticker],
-        "Data Retrieved Last Day": [company_data_all[tick]['last_date'] for tick in top_companies_ticker]
+        "Data As Of": [company_data_all[tick]['last_date'] for tick in top_companies_ticker]
     })
     st.dataframe(stocks_df.set_index("Tickers"), use_container_width=True, hide_index=False)
 
     # Credit 
     st.divider()
-    st.markdown("For more information, please visit [link](%s)." % github_url)
+    st.markdown("For more information, please email jungeunah98@gmail.com or visit [link](%s)." % github_url)
 
 elif st.session_state.page == "analysis":
     st.title("📊 Stock Prediction App")
@@ -364,22 +375,23 @@ elif st.session_state.page == "analysis":
 
     with st.expander("Here's a simple, step-by-step explanation of how the prediction is made"):
         st.write("""
-    1. **Define the Target Ticker (What We Want to Predict)**  
-    We create a label called `label` that tells us the future trend:
+    1. **Define the Target Ticker (What stock do you want to buy or sell?)**  
+
+    2. **Select Features (Input Signals)**  
+    - The model looks at various significant features among the technical indicators and others. 
+             
+    3. **We created a `label` using ***golden cross*** to tell us about the future trend:**
     - If the 5-day Simple Moving Average (SMA5) is **above** the 20-day SMA (SMA20) → this is a classic **golden cross**, a bullish signal → label = **1 (Up/Buy)**
     - If SMA5 is **below** SMA20 → bearish signal → label = **-1 (Down/Sell)**
     - We then **shift this label forward by 1 day** so that today's data predicts **tomorrow's** trend.
+                 
+    4. **Train the Model**  
+    - Start and End dates were defined by the user in the landing page. 
+    - We download the stocks time series data, and split it into training (70%) and testing (30%) sets, while keeping the latest 3 months data as out-of-test sample. 
+    - We select the top machine learning models' predictions based on the evaluators (ie. accuracy score)
 
-    2. **Select Features (Input Signals)**  
-    - The model looks various significant features among the technical indicators and others 🤫 (Don't worry, feature engineering was done in the background)
-             
-    3. **Train the Model**  
-    - We split the historical data into training (70%) and testing (30%) sets.
-    - A **Decision Tree Classifier** (with max depth = 3) is trained on the training data.
-    - Why Decision Tree? After testing multiple models, it showed the **best balance of accuracy** and **lowest overfitting** (similar performance on both training and unseen test data).
-
-    4. **Make Tomorrow's Prediction**  
-    - We feed today's latest indicator values into the trained model.
+    5. **Make Tomorrow's Prediction**  
+    - We feed today's feature values into the trained top models.
     - The model outputs **1** → predicts upward trend tomorrow → **Buy 📈**
     - Or **-1** → predicts downward trend → **Sell 📉**
 
@@ -433,7 +445,10 @@ elif st.session_state.page == "analysis":
 
     # Profit and Loss
     st.subheader("Profit and Loss")
-    st.markdown("This section shows how much profit or loss (%) you would have with the ML Model's prediction in above section.")
+    st.markdown("""
+                This section shows the result of backtested ML models using out-of-sample testing. 
+                It validates predictive performance, simulates realistic trading outcomes, and estimates the 3-month profit/loss returns. 
+                """)
 
     profit_loss = profit_loss_calculation(pred_month, qualifying_models, result_dict)
     
