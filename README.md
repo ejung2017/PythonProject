@@ -35,7 +35,11 @@ This project predicts stock price trends (up or down) using Machine Learning mod
 - Interactive web app where the user inputs the ticker and the date range for stock analysis
 - Estimated 3 month profit/loss returns from the top ML model
 
-https://github.com/user-attachments/assets/ac3ae2c0-d108-4c4f-92f9-1e65f3eb1d1b
+
+
+https://github.com/user-attachments/assets/47f7b22f-854e-42f0-b5dc-e0838485f6e0
+
+
 
 ## 🏦 [Japanese Regional Bank Stocks Analysis](https://github.com/ejung2017/PythonProject/tree/main/stock_analysis)
 
