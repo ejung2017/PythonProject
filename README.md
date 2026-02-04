@@ -9,7 +9,7 @@ My aim is to expand my expertise across Artificial Intelligence (AI) and Machine
 | Project                         | Skills                                          | Description                             |
 |---------------------------------|-------------------------------------------------|-----------------------------------------|
 | Sentiment Analysis              | Python, NLP, SpaCy, Web Scraping                | Analyzes market response                |
-| ARIMA Time-Series Analysis      | Python, Scikit-learn, Seaborn, Statsmodels      | Forecasts stock prices                  |
+| Time-Series Analysis      | Python, Scikit-learn, TA-Lib, Seaborn, Statsmodels    | Forecasts stock buy/sell signals               |
 | Stock Analysis                  | Python, Matplotlib, Pandas, Numpy               | Analyzes market trends                  |
 | Product Review Analysis         | Python, Selenium, SpaCy, WordCloud              | Analyzes e-commerce customer feedback   |
 
@@ -25,15 +25,15 @@ This project analyzes sentiment to address real-time customer feedback and foste
  <img width="790" height="427" alt="Unknown" src="https://github.com/user-attachments/assets/21ae5ffa-1d4e-401b-b7dc-d1388ab08c96" />
 
 
-## 📊 [Stock Price Forecast with ARIMA](https://github.com/ejung2017/PythonProject/tree/main/arima_predictive_modeling)
+## 📊 [Stock Prediction Web App](https://github.com/ejung2017/PythonProject/tree/main/arima_predictive_modeling)
 
-This project applies ARIMA (AutoRegressive Integrated Moving Average) time-series modeling to forecast stock prices, enabling accurate predictions of financial trends and performance metrics. The user can input a listed stock ticker to get a solid analysis on the stock price trend and advice on the future return. 
+This project predicts stock price trends (up or down) using Machine Learning models trained on technical indicators like moving averages, RSI, MACD, and Bollinger Bands. On the landing page, it displays predictions and 3-month profit/loss percentages for six major international companies (Apple, Google, Samsung, Tencent, LVMH, Toyota). Users can enter any stock ticker in the sidebar to get detailed ML predictions on the analysis page, including model accuracy metrics, confusion matrices, and whether to buy or sell based on the model's signal. The app filters and recommends only ML models with >80% accuracy and <5% overfitting gap. It calculates potential profits/losses by simulating trades based on the model's buy/sell signals over the past 3 months.
 
 *Streamlit URL*: https://stockanalysis-ej.streamlit.app
 
 **Key Deliverables**:
 - Interactive web app where the user inputs the ticker and the date range for stock analysis
-- ARIMA Time Series Analysis including SMA20, EMA60, RSI, MACD, and Bollinger Bands
+- Estimated 3 month profit/loss returns from the top ML model
 
 https://github.com/user-attachments/assets/ac3ae2c0-d108-4c4f-92f9-1e65f3eb1d1b
 
