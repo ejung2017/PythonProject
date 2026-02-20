@@ -292,7 +292,7 @@ if st.session_state.page == "landing":
                     Alternatively, use a search engine to look up the company name followed by the word 'ticker.' 
                     In the U.S., tickers generally consist of one to four characters; however, non-U.S. stocks often use different structures or suffixes to indicate the exchange, such as .KS for South Korea.
                     """)
-        st.image("arima_predictive_modeling/ticker.png", width='content')
+        st.image("project2/stock_prediction/ticker.png", width='content')
     st.markdown("""
     The **label** that tells us the future trend:
     - If the 5-day Simple Moving Average (SMA5) is **above** the 20-day SMA (SMA20) → this is a classic **golden cross**, a bullish signal → label = **1 (Up/Buy)**
