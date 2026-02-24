@@ -50,3 +50,11 @@ This project compares two products based on the customer reviews and comes up wi
 | Product A               |  Product B              |
 |-------------------------|-------------------------|
 |<img width="425" alt="Unknown-2" src="https://github.com/user-attachments/assets/d3355e37-045d-4c18-b111-291303c518cd" /> | <img width="425" alt="Unknown-3" src="https://github.com/user-attachments/assets/2251d892-2a8c-45ad-9546-c2ac1d1ae9ab" /> |
+
+## 👩🏻‍💻 [Project4: LinkedIn Job Scraping](https://github.com/ejung2017/PythonProject/tree/main/project4)
+
+Selenium notebook that scrapes LinkedIn job postings (Data Scientist in Hong Kong) and saves company, title, date, and job URL.
+
+**Key Deliverables**:
+- Output: `project4/output_with_links.csv` (includes URLs) and `project4/output.csv`.
+
