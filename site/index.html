@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eunah Jung — Python & ML Projects</title>
+<style>
+  :root {
+    --bg: #fbfaf8; --fg: #1b1a18; --muted: #6b6762;
+    --card: #ffffff; --line: #e5e1db; --accent: #1f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14130f; --fg:#f2efe9; --muted:#9c968d; --card:#1d1c18; --line:#2e2c27; --accent:#7aa7ff; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.6 ui-sans-serif, -apple-system, "Segoe UI", Helvetica, sans-serif;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 72px 24px 96px; }
+  header p { color: var(--muted); max-width: 54ch; }
+  h1 { font-size: clamp(2rem, 6vw, 2.8rem); line-height: 1.15; margin: 0 0 12px; letter-spacing: -0.02em; }
+  .links a { color: var(--accent); margin-right: 18px; }
+  h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em;
+       color: var(--muted); margin: 56px 0 16px; font-weight: 600; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 22px 24px; margin-bottom: 16px;
+  }
+  .card h3 { margin: 0 0 6px; font-size: 1.1rem; }
+  .card h3 a { color: inherit; text-decoration: none; }
+  .card h3 a:hover { color: var(--accent); }
+  .card p { margin: 0 0 14px; color: var(--muted); }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tags span {
+    font-size: 0.72rem; padding: 3px 9px; border-radius: 99px;
+    border: 1px solid var(--line); color: var(--muted);
+  }
+  .demo { display: inline-block; margin-top: 14px; font-size: 0.85rem; color: var(--accent); }
+  .skills { display: grid; gap: 14px; }
+  .skills div { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; }
+  .skills strong { font-size: 0.8rem; min-width: 110px; color: var(--muted); font-weight: 600; }
+  .skills p { margin: 0; }
+  .role { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .role span { color: var(--muted); font-size: 0.85rem; white-space: nowrap; }
+  footer { margin-top: 64px; color: var(--muted); font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Eunah Jung</h1>
+  <p>Python, machine learning, and NLP projects — sentiment analysis, time-series
+     forecasting, and web scraping applied to real market questions.</p>
+  <p class="links">
+    <a href="https://github.com/ejung2017/PythonProject">GitHub</a>
+    <a href="mailto:jungeunah98@gmail.com">Email</a>
+  </p>
+</header>
+
+<h2>About</h2>
+<p>I build end-to-end data projects: scraping the raw source, cleaning it, modeling it,
+   and shipping something someone can actually click. My focus is machine learning and
+   NLP — sentiment, forecasting, and turning messy public text into a decision.</p>
+
+<h2>Skills</h2>
+<div class="skills">
+  <div><strong>Languages</strong><p>Python, SQL</p></div>
+  <div><strong>ML &amp; Stats</strong><p>Scikit-learn, Statsmodels, TA-Lib, time-series forecasting</p></div>
+  <div><strong>NLP</strong><p>SpaCy, sentiment analysis, WordCloud</p></div>
+  <div><strong>Data</strong><p>Pandas, NumPy, Seaborn, Matplotlib</p></div>
+  <div><strong>Scraping</strong><p>Selenium, BeautifulSoup, Requests</p></div>
+  <div><strong>Tools</strong><p>Streamlit, Jupyter, Git, GitHub Actions</p></div>
+</div>
+
+<h2>Projects</h2>
+
+<div class="card">
+  <h3><a href="https://github.com/ejung2017/PythonProject/tree/main/project1">WWDC2025 Siri News Sentiment Analysis</a></h3>
+  <p>Scraped 98 news articles on Apple Intelligence Siri and scored sentiment to
+     measure public expectation. 35% optimistic on personalization, 65% disappointed
+     by repeated delays.</p>
+  <div class="tags"><span>NLP</span><span>SpaCy</span><span>Web Scraping</span><span>WordCloud</span></div>
+</div>
+
+<div class="card">
+  <h3><a href="https://github.com/ejung2017/PythonProject/tree/main/project2">Stock Prediction Web App</a></h3>
+  <p>Predicts up/down price trends from technical indicators (MA, RSI, MACD,
+     Bollinger Bands), keeping only models above 80% accuracy with under a 5%
+     overfitting gap, then simulates 3-month profit/loss from their buy/sell signals.</p>
+  <div class="tags"><span>Scikit-learn</span><span>Streamlit</span><span>TA-Lib</span><span>Statsmodels</span></div>
+  <a class="demo" href="https://stockanalysis-ej.streamlit.app">Live app →</a>
+</div>
+
+<div class="card">
+  <h3><a href="https://github.com/ejung2017/PythonProject/tree/main/project3">Amazon Product Review Analysis</a></h3>
+  <p>Crawled and compared reviews for two competing products to pick the better buy.
+     Product A scored 78% positive against B's 52%, winning on durability, design,
+     and convenience.</p>
+  <div class="tags"><span>Selenium</span><span>SpaCy</span><span>WordCloud</span></div>
+</div>
+
+<div class="card">
+  <h3><a href="https://github.com/ejung2017/PythonProject/tree/main/project4">LinkedIn Job Scraping</a></h3>
+  <p>Scrapes Data Scientist postings in Hong Kong — company, title, date, and
+     application URL — into a CSV for tracking the local market.</p>
+  <div class="tags"><span>Selenium</span><span>Pandas</span></div>
+</div>
+
+<!-- TODO: fill in or delete. -->
+<h2>Education &amp; Experience</h2>
+<div class="card">
+  <div class="role"><h3>Your degree, your university</h3><span>Year – Year</span></div>
+  <p>One line on focus or thesis.</p>
+</div>
+
+<footer>Built with plain HTML. Deployed from <code>main</code> by GitHub Actions.</footer>
+
+</div>
+</body>
+</html>
