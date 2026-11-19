@@ -50,21 +50,6 @@ ln -sf /etc/nginx/sites-available/$DOMAIN /etc/nginx/sites-enabled/$DOMAIN
 rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl reload nginx
 
-echo "==> swap"
-# 1 GB droplet: swap is the difference between the Streamlit app getting
-# OOM-killed (taking nginx down with it) and just running slowly for a moment.
-if ! swapon --show | grep -q /swapfile; then
-  fallocate -l 2G /swapfile
-  chmod 600 /swapfile
-  mkswap /swapfile >/dev/null
-  swapon /swapfile
-fi
-grep -q '^/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
-# Default swappiness (60) swaps eagerly; 10 keeps swap as a safety net only.
-echo 'vm.swappiness=10' > /etc/sysctl.d/99-swappiness.conf
-sysctl -q -w vm.swappiness=10
-free -h | head -3
-
 echo "==> firewall"
 ufw allow OpenSSH >/dev/null
 ufw allow 'Nginx Full' >/dev/null
