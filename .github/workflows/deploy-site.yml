@@ -26,11 +26,18 @@ jobs:
       - run: npm run build
         working-directory: web
 
-      - uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+      # Key is stored base64-encoded: GitHub's secret field strips trailing
+      # whitespace, and ssh refuses a key with no final newline.
+      - name: Load deploy key
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY_B64 }}" | base64 -d > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null   # fails loudly if malformed
 
       # --delete removes files that no longer exist in the build.
-      - run: |
-          rsync -az --delete -e "ssh -o StrictHostKeyChecking=accept-new" \
+      - name: Deploy
+        run: |
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
             web/dist/ deploy@${{ secrets.DEPLOY_HOST }}:/var/www/eunahjung.app/
