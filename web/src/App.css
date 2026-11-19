@@ -1,0 +1,34 @@
+.wrap { max-width: 760px; margin: 0 auto; padding: 72px 24px 96px; }
+
+h1 { font-size: clamp(2rem, 6vw, 2.8rem); line-height: 1.15; margin: 0 0 12px; letter-spacing: -0.02em; }
+.lede { color: var(--muted); max-width: 54ch; }
+.links a { margin-right: 18px; }
+
+h2 {
+  font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--muted); margin: 56px 0 16px; font-weight: 600;
+}
+
+.card {
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  padding: 22px 24px; margin-bottom: 16px;
+}
+.card h3 { margin: 0 0 6px; font-size: 1.1rem; }
+.card h3 a { color: inherit; text-decoration: none; }
+.card h3 a:hover { color: var(--accent); }
+.card p { margin: 0 0 14px; color: var(--muted); }
+
+.tags { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.tags li {
+  font-size: 0.72rem; padding: 3px 9px; border-radius: 99px;
+  border: 1px solid var(--line); color: var(--muted);
+}
+
+.demo { display: inline-block; margin-top: 14px; font-size: 0.85rem; }
+
+.skills { display: grid; gap: 14px; margin: 0; }
+.skills div { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; }
+.skills dt { font-size: 0.8rem; min-width: 110px; color: var(--muted); font-weight: 600; }
+.skills dd { margin: 0; }
+
+footer { margin-top: 64px; color: var(--muted); font-size: 0.85rem; }

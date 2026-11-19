@@ -1,0 +1,36 @@
+name: Deploy portfolio site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - '.github/workflows/deploy-site.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+        working-directory: web
+
+      - run: npm run build
+        working-directory: web
+
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+
+      # --delete removes files that no longer exist in the build.
+      - run: |
+          rsync -az --delete -e "ssh -o StrictHostKeyChecking=accept-new" \
+            web/dist/ deploy@${{ secrets.DEPLOY_HOST }}:/var/www/eunahjung.app/

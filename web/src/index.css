@@ -1,0 +1,16 @@
+:root {
+  --bg: #fbfaf8; --fg: #1b1a18; --muted: #6b6762;
+  --card: #ffffff; --line: #e5e1db; --accent: #1f6feb;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14130f; --fg: #f2efe9; --muted: #9c968d;
+    --card: #1d1c18; --line: #2e2c27; --accent: #7aa7ff;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.6 ui-sans-serif, -apple-system, 'Segoe UI', Helvetica, sans-serif;
+}
+a { color: var(--accent); }
