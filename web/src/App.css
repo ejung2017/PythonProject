@@ -32,3 +32,23 @@ h2 {
 .skills dd { margin: 0; }
 
 footer { margin-top: 64px; color: var(--muted); font-size: 0.85rem; }
+
+/* Project media: evidence under each description. */
+.shot {
+  display: block;
+  width: 100%;
+  margin-top: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+}
+.shot-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.shot-pair .shot { margin-top: 18px; }
+@media (max-width: 520px) {
+  .shot-pair { grid-template-columns: 1fr; }
+  .shot-pair .shot:last-child { margin-top: 0; }
+}

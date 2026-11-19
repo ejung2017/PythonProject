@@ -9,6 +9,8 @@ const projects = [
             measure public expectation. 35% optimistic on personalization, 65%
             disappointed by repeated delays.`,
     tags: ['NLP', 'SpaCy', 'Web Scraping', 'WordCloud'],
+    media: { type: 'image', src: '/projects/siri-wordcloud.png',
+             alt: 'Word cloud of the most frequent terms across 98 Siri news articles' },
   },
   {
     title: 'Stock Prediction Web App',
@@ -18,6 +20,7 @@ const projects = [
             overfitting gap, then simulates 3-month profit/loss from their signals.`,
     tags: ['Scikit-learn', 'Streamlit', 'TA-Lib', 'Statsmodels'],
     demo: { label: 'Live app', href: 'https://eunahjung.app/stock/' },
+    media: { type: 'video', src: '/projects/stock-demo.mp4' },
   },
   {
     title: 'Amazon Product Review Analysis',
@@ -26,6 +29,9 @@ const projects = [
             buy. Product A scored 78% positive against B's 52%, winning on durability,
             design, and convenience.`,
     tags: ['Selenium', 'SpaCy', 'WordCloud'],
+    media: { type: 'pair', src: ['/projects/reviews-nicwell.png', '/projects/reviews-coslus.png'],
+             alt: ['Sentiment breakdown for Product A (Nicwell)',
+                   'Sentiment breakdown for Product B (COSLUS)'] },
   },
   {
     title: 'LinkedIn Job Scraping',
@@ -45,7 +51,24 @@ const skills = [
   ['Tools', 'React, Streamlit, Jupyter, Git, GitHub Actions, nginx'],
 ]
 
-function ProjectCard({ title, href, blurb, tags, demo }) {
+function Media({ type, src, alt }) {
+  if (type === 'video') {
+    // 4MB file — preload only metadata so the card costs nothing until played.
+    return (
+      <video className="shot" src={src} controls preload="metadata" playsInline />
+    )
+  }
+  if (type === 'pair') {
+    return (
+      <div className="shot-pair">
+        {src.map((s, i) => <img className="shot" key={s} src={s} alt={alt[i]} loading="lazy" />)}
+      </div>
+    )
+  }
+  return <img className="shot" src={src} alt={alt} loading="lazy" />
+}
+
+function ProjectCard({ title, href, blurb, tags, demo, media }) {
   return (
     <article className="card">
       <h3><a href={href}>{title}</a></h3>
@@ -54,6 +77,7 @@ function ProjectCard({ title, href, blurb, tags, demo }) {
         {tags.map((t) => <li key={t}>{t}</li>)}
       </ul>
       {demo && <a className="demo" href={demo.href}>{demo.label} →</a>}
+      {media && <Media {...media} />}
     </article>
   )
 }
