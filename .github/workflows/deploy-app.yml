@@ -1,0 +1,30 @@
+name: Deploy Streamlit app
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'project2/**'
+      - 'deploy/deploy.sh'
+      - '.github/workflows/deploy-app.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Load deploy key
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY_B64 }}" | base64 -d > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null
+
+      # Provisioning needs root (apt, systemd, nginx); the app itself runs as
+      # the unprivileged deploy user. The script is idempotent.
+      - name: Deploy
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+            root@${{ secrets.DEPLOY_HOST }} 'bash -s' < deploy/deploy.sh

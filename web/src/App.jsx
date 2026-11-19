@@ -17,7 +17,7 @@ const projects = [
             Bollinger Bands), keeping only models above 80% accuracy with under a 5%
             overfitting gap, then simulates 3-month profit/loss from their signals.`,
     tags: ['Scikit-learn', 'Streamlit', 'TA-Lib', 'Statsmodels'],
-    demo: { label: 'Live app', href: 'https://stockanalysis-ej.streamlit.app' },
+    demo: { label: 'Live app', href: 'https://eunahjung.app/stock/' },
   },
   {
     title: 'Amazon Product Review Analysis',
