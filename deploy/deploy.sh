@@ -18,13 +18,16 @@ apt-get update -qq
 apt-get install -y -qq python3-venv python3-dev build-essential pkg-config curl
 
 echo "==> source"
-if [ -d "$APPDIR/.git" ]; then
-  git -C "$APPDIR" fetch -q origin main
-  git -C "$APPDIR" reset -q --hard origin/main
-else
-  git clone -q "$REPO" "$APPDIR"
-fi
+# Git runs as $RUNAS, which owns the tree. Running it as root instead trips
+# git's "dubious ownership" guard on every run after the first.
+install -d -o $RUNAS -g $RUNAS "$APPDIR"
 chown -R $RUNAS:$RUNAS "$APPDIR"
+if [ -d "$APPDIR/.git" ]; then
+  sudo -u $RUNAS git -C "$APPDIR" fetch -q origin main
+  sudo -u $RUNAS git -C "$APPDIR" reset -q --hard origin/main
+else
+  sudo -u $RUNAS git clone -q "$REPO" "$APPDIR"
+fi
 
 echo "==> python deps"
 sudo -u $RUNAS test -d "$VENV" || sudo -u $RUNAS python3 -m venv "$VENV"
